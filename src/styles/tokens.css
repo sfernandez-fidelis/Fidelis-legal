@@ -1,0 +1,13 @@
+@theme {
+  --color-brand-50: #f4fbe1;
+  --color-brand-100: #e6f7b9;
+  --color-brand-200: #d5f488;
+  --color-brand-300: #c5f42f; /* The requested color */
+  --color-brand-400: #aadd15;
+  --color-brand-500: #88b80b; /* Tree-like green */
+  --color-brand-600: #689106;
+  --color-brand-700: #4e6f06;
+  --color-brand-800: #3f5809;
+  --color-brand-900: #354a0b;
+  --color-brand-950: #1a2802;
+}
