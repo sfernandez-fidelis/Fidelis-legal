@@ -1,27 +1,59 @@
-import React, { useState, useEffect } from 'react';
-import { User, Briefcase, Search, Trash2, AlertTriangle, CheckCircle2 } from 'lucide-react';
-import { PartyDetails } from '../../types';
-import { useContacts } from '../../contexts/ContactContext';
+import React, { useEffect, useMemo, useState } from 'react';
+import { AlertTriangle, Briefcase, CheckCircle2, Clock3, Save, Search, Sparkles, Trash2, User } from 'lucide-react';
+import type { ContactData, ContactType, PartyDetails } from '../../types';
+import { useDebouncedValue } from '../../shared/hooks/useDebouncedValue';
+import { useContactSuggestions } from '../../features/contacts/hooks/useContactSuggestions';
+import { contactTypeLabels, normalizeText } from '../../features/contacts/contactUtils';
 
 interface Props {
   party: PartyDetails;
   onChange: (updated: PartyDetails) => void;
   title: string;
+  contacts: ContactData[];
+  suggestionTypes?: ContactType[];
+  onSaveContact?: (party: PartyDetails) => Promise<void> | void;
   onRemove?: () => void;
 }
 
-export default function PartyForm({ party, onChange, title, onRemove }: Props) {
-  const { contacts } = useContacts();
+export default function PartyForm({
+  party,
+  onChange,
+  title,
+  contacts,
+  suggestionTypes,
+  onSaveContact,
+  onRemove,
+}: Props) {
   const [showSearch, setShowSearch] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [dpiError, setDpiError] = useState('');
   const [actaWarning, setActaWarning] = useState('');
-  const [autoFillSuggestion, setAutoFillSuggestion] = useState<PartyDetails | null>(null);
+  const [autoFillSuggestion, setAutoFillSuggestion] = useState<ContactData | null>(null);
+  const [isSavingContact, setIsSavingContact] = useState(false);
+  const debouncedSearch = useDebouncedValue(searchTerm, 250);
+  const suggestionQuery = useContactSuggestions(debouncedSearch, {
+    limit: 6,
+    types: suggestionTypes,
+    enabled: showSearch || Boolean(debouncedSearch),
+  });
+  const recentQuery = useContactSuggestions('', {
+    limit: 5,
+    types: suggestionTypes,
+    enabled: showSearch,
+    sort: 'recent',
+  });
 
-  const filteredContacts = contacts.filter(c => 
-    c.party.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (c.party.entityName && c.party.entityName.toLowerCase().includes(searchTerm.toLowerCase()))
+  const localMatches = useMemo(
+    () =>
+      contacts.filter((contact) =>
+        [contact.displayName, contact.party.name, contact.party.entityName]
+          .filter(Boolean)
+          .some((value) => normalizeText(String(value)).includes(normalizeText(searchTerm))),
+      ),
+    [contacts, searchTerm],
   );
+
+  const suggestionResults = debouncedSearch.trim() ? suggestionQuery.data ?? localMatches.slice(0, 6) : recentQuery.data ?? contacts.slice(0, 5);
 
   const handleSelectContact = (contactParty: PartyDetails) => {
     onChange(contactParty);
@@ -30,311 +62,353 @@ export default function PartyForm({ party, onChange, title, onRemove }: Props) {
     setAutoFillSuggestion(null);
   };
 
-  // Auto-fill logic based on DPI or Entity Name
   useEffect(() => {
-    if (party.idNumber && party.idNumber.length === 13) {
-      const match = contacts.find(c => c.party.idNumber === party.idNumber && c.party.name !== party.name);
-      if (match) {
-        setAutoFillSuggestion(match.party);
-      } else {
-        setAutoFillSuggestion(null);
+    const exactMatch = contacts.find((contact) => {
+      if (party.idNumber && contact.party.idNumber === party.idNumber && contact.party.name !== party.name) {
+        return true;
       }
-    } else if (party.entityName && party.entityName.length > 5) {
-      const match = contacts.find(c => c.party.entityName?.toLowerCase() === party.entityName?.toLowerCase() && c.party.name !== party.name);
-      if (match) {
-        setAutoFillSuggestion(match.party);
-      } else {
-        setAutoFillSuggestion(null);
-      }
-    } else {
-      setAutoFillSuggestion(null);
-    }
-  }, [party.idNumber, party.entityName, contacts]);
 
-  // DPI Validation
-  useEffect(() => {
-    if (party.idNumber && party.idNumber.length > 0) {
-      if (party.idNumber.length !== 13) {
-        setDpiError('El DPI debe tener exactamente 13 dígitos.');
-      } else {
-        setDpiError('');
+      if (
+        party.entityName &&
+        normalizeText(contact.party.entityName) === normalizeText(party.entityName) &&
+        normalizeText(contact.party.name) !== normalizeText(party.name)
+      ) {
+        return true;
       }
-    } else {
-      setDpiError('');
+
+      if (
+        party.name &&
+        party.name.length > 4 &&
+        normalizeText(contact.party.name) === normalizeText(party.name) &&
+        contact.party.idNumber !== party.idNumber
+      ) {
+        return true;
+      }
+
+      return false;
+    });
+
+    setAutoFillSuggestion(exactMatch ?? null);
+  }, [contacts, party.entityName, party.idNumber, party.name]);
+
+  useEffect(() => {
+    if (party.idNumber && party.idNumber.length > 0 && party.idNumber.length !== 13) {
+      setDpiError('El DPI debe tener exactamente 13 digitos.');
+      return;
     }
+
+    setDpiError('');
   }, [party.idNumber]);
 
-  // Expiration Warning (Acta Notarial)
   useEffect(() => {
     if (party.isRepresenting && party.actDate) {
       const actDate = new Date(party.actDate);
       const today = new Date();
-      const diffTime = Math.abs(today.getTime() - actDate.getTime());
-      const diffYears = diffTime / (1000 * 60 * 60 * 24 * 365.25);
-      
+      const diffYears = Math.abs(today.getTime() - actDate.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
+
       if (diffYears > 3) {
-        setActaWarning('El acta notarial tiene más de 3 años. Verifique su vigencia.');
-      } else {
-        setActaWarning('');
+        setActaWarning('El acta notarial tiene mas de 3 anos. Verifique su vigencia.');
+        return;
       }
-    } else {
-      setActaWarning('');
     }
+
+    setActaWarning('');
   }, [party.actDate, party.isRepresenting]);
 
+  const handleSaveContact = async () => {
+    if (!onSaveContact) {
+      return;
+    }
+
+    setIsSavingContact(true);
+    try {
+      await onSaveContact(party);
+    } finally {
+      setIsSavingContact(false);
+    }
+  };
+
   return (
-    <div className="space-y-6 p-6 bg-white rounded-xl border border-gray-100 shadow-sm relative">
-      <div className="flex justify-between items-center">
-        <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
+    <div className="relative space-y-6 rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h4 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-gray-900">
           <User className="text-brand-600" size={18} />
           {title}
         </h4>
-        <div className="flex items-center gap-4">
-          <button 
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700"
+            onClick={() => setShowSearch((current) => !current)}
             type="button"
-            onClick={() => setShowSearch(!showSearch)}
-            className="text-xs font-medium text-brand-600 hover:text-brand-700 flex items-center gap-1"
           >
-            <Search size={14} /> Buscar Contacto
+            <Search size={14} />
+            Use saved contact
           </button>
-          <label className="flex items-center gap-2 cursor-pointer group">
-            <div className={`w-10 h-5 rounded-full transition-colors relative ${party.isRepresenting ? 'bg-brand-600' : 'bg-gray-200'}`}>
-              <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-transform ${party.isRepresenting ? 'left-6' : 'left-1'}`} />
+          {onSaveContact ? (
+            <button
+              className="flex items-center gap-1 text-xs font-medium text-stone-600 hover:text-stone-900 disabled:opacity-50"
+              disabled={isSavingContact || !party.name}
+              onClick={handleSaveContact}
+              type="button"
+            >
+              <Save size={14} />
+              {isSavingContact ? 'Saving...' : 'Save as new contact'}
+            </button>
+          ) : null}
+          <label className="group flex cursor-pointer items-center gap-2">
+            <div className={`relative h-5 w-10 rounded-full transition-colors ${party.isRepresenting ? 'bg-brand-600' : 'bg-gray-200'}`}>
+              <div className={`absolute top-1 h-3 w-3 rounded-full bg-white transition-transform ${party.isRepresenting ? 'left-6' : 'left-1'}`} />
             </div>
             <input
-              type="checkbox"
-              className="hidden"
               checked={party.isRepresenting}
-              onChange={(e) => onChange({ ...party, isRepresenting: e.target.checked })}
+              className="hidden"
+              onChange={(event) => onChange({ ...party, isRepresenting: event.target.checked })}
+              type="checkbox"
             />
-            <span className="text-xs font-medium text-gray-600 group-hover:text-brand-600 transition-colors">¿Representa a una entidad?</span>
+            <span className="text-xs font-medium text-gray-600 transition-colors group-hover:text-brand-600">
+              Represents an entity
+            </span>
           </label>
-          {onRemove && (
+          {onRemove ? (
             <button
-              type="button"
+              className="ml-2 text-gray-400 transition-colors hover:text-red-600"
               onClick={onRemove}
-              className="text-gray-400 hover:text-red-600 transition-colors ml-2"
               title="Eliminar"
+              type="button"
             >
               <Trash2 size={18} />
             </button>
-          )}
+          ) : null}
         </div>
       </div>
 
-      {showSearch && (
-        <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-3 animate-in fade-in slide-in-from-top-2">
+      {showSearch ? (
+        <div className="animate-in slide-in-from-top-2 space-y-3 rounded-xl border border-gray-200 bg-gray-50 p-4 fade-in">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-            <input 
-              type="text" 
-              placeholder="Buscar por nombre o entidad..." 
+            <input
+              className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-10 pr-4 text-sm outline-none focus:ring-2 focus:ring-brand-500"
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Search by name, company, or document ID..."
+              type="text"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-brand-500" 
             />
           </div>
-          {searchTerm && (
-            <div className="max-h-40 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-sm divide-y divide-gray-100">
-              {filteredContacts.length > 0 ? (
-                filteredContacts.map(c => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => handleSelectContact(c.party)}
-                    className="w-full text-left px-4 py-2 hover:bg-brand-50 transition-colors"
-                  >
-                    <p className="text-sm font-medium text-gray-900">{c.party.name}</p>
-                    {c.party.entityName && <p className="text-xs text-gray-500">{c.party.entityName}</p>}
-                  </button>
-                ))
-              ) : (
-                <p className="px-4 py-3 text-xs text-gray-500 text-center">No se encontraron contactos.</p>
-              )}
-            </div>
-          )}
+          <div className="flex items-center gap-2 text-xs uppercase tracking-[0.25em] text-gray-400">
+            {debouncedSearch ? <Sparkles size={13} /> : <Clock3 size={13} />}
+            {debouncedSearch ? 'Matching suggestions' : 'Recent contacts'}
+          </div>
+          <div className="max-h-56 divide-y divide-gray-100 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-sm">
+            {suggestionResults.length ? (
+              suggestionResults.map((contact) => (
+                <button
+                  className="w-full px-4 py-3 text-left transition-colors hover:bg-brand-50"
+                  key={contact.id}
+                  onClick={() => handleSelectContact(contact.party)}
+                  type="button"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{contact.displayName}</p>
+                      <p className="mt-1 text-xs text-gray-500">
+                        {[contact.party.entityName, contact.party.idNumber, ...(contact.contactTypes ?? []).slice(0, 2).map((type) => contactTypeLabels[type])]
+                          .filter(Boolean)
+                          .join(' • ')}
+                      </p>
+                    </div>
+                    <div className="text-right text-xs text-gray-400">
+                      <p>{contact.metadata.useCount ?? 0} uses</p>
+                    </div>
+                  </div>
+                </button>
+              ))
+            ) : (
+              <p className="px-4 py-3 text-center text-xs text-gray-500">No contacts found.</p>
+            )}
+          </div>
         </div>
-      )}
+      ) : null}
 
-      {autoFillSuggestion && (
-        <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg flex items-start justify-between animate-in fade-in">
+      {autoFillSuggestion ? (
+        <div className="animate-in flex items-start justify-between rounded-lg border border-blue-200 bg-blue-50 p-4 fade-in">
           <div className="flex gap-3">
             <div className="mt-0.5 text-blue-600">
               <CheckCircle2 size={18} />
             </div>
             <div>
-              <p className="text-sm font-medium text-blue-900">Contacto encontrado en la base de datos</p>
-              <p className="text-xs text-blue-700 mt-1">
-                ¿Deseas autocompletar los datos con la información de <strong>{autoFillSuggestion.name}</strong>?
+              <p className="text-sm font-medium text-blue-900">Autofill available</p>
+              <p className="mt-1 text-xs text-blue-700">
+                We found saved details for <strong>{autoFillSuggestion.displayName}</strong>. Use them to fill this section instantly.
               </p>
             </div>
           </div>
           <div className="flex gap-2">
             <button
-              type="button"
+              className="rounded-md px-3 py-1.5 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-100"
               onClick={() => setAutoFillSuggestion(null)}
-              className="px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100 rounded-md transition-colors"
+              type="button"
             >
-              Ignorar
+              Ignore
             </button>
             <button
+              className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-blue-700"
+              onClick={() => handleSelectContact(autoFillSuggestion.party)}
               type="button"
-              onClick={() => handleSelectContact(autoFillSuggestion)}
-              className="px-3 py-1.5 text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors shadow-sm"
             >
-              Autocompletar
+              Autofill
             </button>
           </div>
         </div>
-      )}
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      ) : null}
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="md:col-span-2">
-          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Nombre Completo</label>
+          <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-gray-500">Full name</label>
           <input
+            className="w-full rounded-lg border border-gray-200 bg-gray-50 p-2.5 outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-brand-500"
+            onChange={(event) => onChange({ ...party, name: event.target.value })}
             type="text"
-            className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none transition-all"
             value={party.name}
-            onChange={(e) => onChange({ ...party, name: e.target.value })}
           />
         </div>
         <div>
-          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Edad (Número)</label>
+          <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-gray-500">Age</label>
           <input
+            className="w-full rounded-lg border border-gray-200 bg-gray-50 p-2.5 outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-brand-500"
+            onChange={(event) => onChange({ ...party, age: event.target.value })}
             type="number"
-            className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none transition-all"
             value={party.age}
-            onChange={(e) => onChange({ ...party, age: e.target.value })}
           />
         </div>
         <div>
-          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Estado Civil</label>
+          <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-gray-500">Marital status</label>
           <select
-            className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none transition-all"
+            className="w-full rounded-lg border border-gray-200 bg-gray-50 p-2.5 outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-brand-500"
+            onChange={(event) => onChange({ ...party, maritalStatus: event.target.value })}
             value={party.maritalStatus}
-            onChange={(e) => onChange({ ...party, maritalStatus: e.target.value })}
           >
             <option value="soltero">Soltero</option>
             <option value="casado">Casado</option>
           </select>
         </div>
         <div>
-          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Profesión</label>
+          <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-gray-500">Profession</label>
           <input
+            className="w-full rounded-lg border border-gray-200 bg-gray-50 p-2.5 outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-brand-500"
+            onChange={(event) => onChange({ ...party, profession: event.target.value })}
             type="text"
-            className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none transition-all"
             value={party.profession}
-            onChange={(e) => onChange({ ...party, profession: e.target.value })}
           />
         </div>
         <div>
-          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Domicilio (Departamento)</label>
+          <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-gray-500">Domicile</label>
           <input
+            className="w-full rounded-lg border border-gray-200 bg-gray-50 p-2.5 outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-brand-500"
+            onChange={(event) => onChange({ ...party, domicile: event.target.value })}
             type="text"
-            className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none transition-all"
             value={party.domicile}
-            onChange={(e) => onChange({ ...party, domicile: e.target.value })}
           />
         </div>
         <div className="md:col-span-2">
-          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">DPI / CUI (13 dígitos sin espacios)</label>
+          <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-gray-500">DPI / CUI</label>
           <input
-            type="text"
+            className={`w-full rounded-lg border bg-gray-50 p-2.5 font-mono outline-none transition-all focus:border-transparent ${dpiError ? 'border-red-300 focus:ring-2 focus:ring-red-500' : 'border-gray-200 focus:ring-2 focus:ring-brand-500'}`}
             maxLength={13}
-            className={`w-full p-2.5 bg-gray-50 border rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none transition-all font-mono ${dpiError ? 'border-red-300 focus:ring-red-500' : 'border-gray-200'}`}
+            onChange={(event) => onChange({ ...party, idNumber: event.target.value.replace(/\D/g, '') })}
+            placeholder="1965878401501"
+            type="text"
             value={party.idNumber}
-            onChange={(e) => onChange({ ...party, idNumber: e.target.value.replace(/\D/g, '') })}
-            placeholder="Ej: 1965878401501"
           />
-          {dpiError && (
-            <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-              <AlertTriangle size={12} /> {dpiError}
+          {dpiError ? (
+            <p className="mt-1 flex items-center gap-1 text-xs text-red-500">
+              <AlertTriangle size={12} />
+              {dpiError}
             </p>
-          )}
+          ) : null}
         </div>
       </div>
 
-      {party.isRepresenting && (
-        <div className="mt-6 p-6 bg-brand-50/50 rounded-xl border border-brand-100 space-y-4 animate-in fade-in slide-in-from-top-2">
-          <p className="text-xs font-bold text-brand-800 uppercase tracking-widest flex items-center gap-2">
+      {party.isRepresenting ? (
+        <div className="animate-in mt-6 space-y-4 rounded-xl border border-brand-100 bg-brand-50/50 p-6 fade-in slide-in-from-top-2">
+          <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-brand-800">
             <Briefcase size={16} />
-            Datos de la Entidad y Representación
+            Entity and representation details
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="md:col-span-2">
-              <label className="block text-xs font-bold text-brand-700 uppercase tracking-wider mb-1">Nombre de la Entidad</label>
+              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-brand-700">Entity name</label>
               <input
+                className="w-full rounded-lg border border-brand-200 bg-white p-2.5 outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-brand-500"
+                onChange={(event) => onChange({ ...party, entityName: event.target.value })}
                 type="text"
-                className="w-full p-2.5 bg-white border border-brand-200 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none transition-all"
                 value={party.entityName}
-                onChange={(e) => onChange({ ...party, entityName: e.target.value })}
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-brand-700 uppercase tracking-wider mb-1">Calidad (Cargo)</label>
+              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-brand-700">Representative role</label>
               <input
+                className="w-full rounded-lg border border-brand-200 bg-white p-2.5 outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-brand-500"
+                onChange={(event) => onChange({ ...party, role: event.target.value })}
                 type="text"
-                className="w-full p-2.5 bg-white border border-brand-200 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none transition-all"
                 value={party.role}
-                onChange={(e) => onChange({ ...party, role: e.target.value })}
-                placeholder="Ej: Administrador Único"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-brand-700 uppercase tracking-wider mb-1">Notario</label>
+              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-brand-700">Notary</label>
               <input
+                className="w-full rounded-lg border border-brand-200 bg-white p-2.5 outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-brand-500"
+                onChange={(event) => onChange({ ...party, notaryName: event.target.value })}
                 type="text"
-                className="w-full p-2.5 bg-white border border-brand-200 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none transition-all"
                 value={party.notaryName}
-                onChange={(e) => onChange({ ...party, notaryName: e.target.value })}
               />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-xs font-bold text-brand-700 uppercase tracking-wider mb-1">Fecha de Acta</label>
+              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-brand-700">Act date</label>
               <input
+                className={`w-full rounded-lg border bg-white p-2.5 outline-none transition-all focus:border-transparent ${actaWarning ? 'border-amber-300 focus:ring-2 focus:ring-amber-500' : 'border-brand-200 focus:ring-2 focus:ring-brand-500'}`}
+                onChange={(event) => onChange({ ...party, actDate: event.target.value })}
                 type="date"
-                className={`w-full p-2.5 bg-white border rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none transition-all ${actaWarning ? 'border-amber-300 focus:ring-amber-500' : 'border-brand-200'}`}
                 value={party.actDate}
-                onChange={(e) => onChange({ ...party, actDate: e.target.value })}
               />
-              {actaWarning && (
-                <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
-                  <AlertTriangle size={12} /> {actaWarning}
+              {actaWarning ? (
+                <p className="mt-1 flex items-center gap-1 text-xs text-amber-600">
+                  <AlertTriangle size={12} />
+                  {actaWarning}
                 </p>
-              )}
+              ) : null}
             </div>
             <div className="grid grid-cols-3 gap-2 md:col-span-2">
               <div>
-                <label className="block text-xs font-bold text-brand-700 uppercase tracking-wider mb-1">Registro</label>
+                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-brand-700">Registry</label>
                 <input
+                  className="w-full rounded-lg border border-brand-200 bg-white p-2.5 outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-brand-500"
+                  onChange={(event) => onChange({ ...party, regNumber: event.target.value })}
                   type="text"
-                  className="w-full p-2.5 bg-white border border-brand-200 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none transition-all"
                   value={party.regNumber}
-                  onChange={(e) => onChange({ ...party, regNumber: e.target.value })}
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-brand-700 uppercase tracking-wider mb-1">Folio</label>
+                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-brand-700">Folio</label>
                 <input
+                  className="w-full rounded-lg border border-brand-200 bg-white p-2.5 outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-brand-500"
+                  onChange={(event) => onChange({ ...party, regFolio: event.target.value })}
                   type="text"
-                  className="w-full p-2.5 bg-white border border-brand-200 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none transition-all"
                   value={party.regFolio}
-                  onChange={(e) => onChange({ ...party, regFolio: e.target.value })}
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-brand-700 uppercase tracking-wider mb-1">Libro</label>
+                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-brand-700">Book</label>
                 <input
+                  className="w-full rounded-lg border border-brand-200 bg-white p-2.5 outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-brand-500"
+                  onChange={(event) => onChange({ ...party, regBook: event.target.value })}
                   type="text"
-                  className="w-full p-2.5 bg-white border border-brand-200 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none transition-all"
                   value={party.regBook}
-                  onChange={(e) => onChange({ ...party, regBook: e.target.value })}
                 />
               </div>
             </div>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

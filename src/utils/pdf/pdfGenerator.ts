@@ -5,37 +5,44 @@ import { generateCounterGuaranteePublicHTML } from './templates/CounterGuarantee
 import { generateMortgageGuaranteeHTML } from './templates/MortgageGuaranteeTemplate';
 import { compileTemplate } from '../templateEngine';
 
-export const generateContractPDF = async (data: CounterGuaranteeData, customTemplateStr?: string) => {
-  let html = '';
-  
+function buildBaseFileName(data: CounterGuaranteeData) {
+  const typeLabel =
+    data.type === ContractType.COUNTER_GUARANTEE_PRIVATE
+      ? 'Documento Privado'
+      : data.type === ContractType.COUNTER_GUARANTEE_PUBLIC
+        ? 'Escritura Publica'
+        : 'Hipoteca';
+  const policiesLabel = data.policies.map((policy) => policy.number).join(' y ');
+  const entityLabel = data.principal.entityName || data.principal.name || 'Documento legal';
+  return `${entityLabel} - ${typeLabel}${policiesLabel ? ` - ${policiesLabel}` : ''}`.replace(/[\\/:*?"<>|]+/g, '').trim();
+}
+
+function getHtml(data: CounterGuaranteeData, customTemplateStr?: string) {
   if (customTemplateStr) {
-    html = compileTemplate(customTemplateStr, data);
-  } else {
-    switch (data.type) {
-      case ContractType.COUNTER_GUARANTEE_PRIVATE:
-        html = generateCounterGuaranteePrivateHTML(data);
-        break;
-      case ContractType.COUNTER_GUARANTEE_PUBLIC:
-        html = generateCounterGuaranteePublicHTML(data);
-        break;
-      case ContractType.MORTGAGE_GUARANTEE:
-        html = generateMortgageGuaranteeHTML(data);
-        break;
-      default:
-        html = generateCounterGuaranteePrivateHTML(data);
-    }
+    return compileTemplate(customTemplateStr, data);
   }
 
+  switch (data.type) {
+    case ContractType.COUNTER_GUARANTEE_PRIVATE:
+      return generateCounterGuaranteePrivateHTML(data);
+    case ContractType.COUNTER_GUARANTEE_PUBLIC:
+      return generateCounterGuaranteePublicHTML(data);
+    case ContractType.MORTGAGE_GUARANTEE:
+      return generateMortgageGuaranteeHTML(data);
+    default:
+      return generateCounterGuaranteePrivateHTML(data);
+  }
+}
+
+export async function renderContractPDF(data: CounterGuaranteeData, customTemplateStr?: string) {
+  const html = getHtml(data, customTemplateStr);
   const element = document.createElement('div');
   element.innerHTML = html;
-  // Ensure the element is styled for A4/Letter width to render correctly
-  element.style.width = '170mm'; // Letter width minus margins
+  element.style.width = '170mm';
   element.style.fontSize = '11pt';
   element.style.fontFamily = 'Times New Roman, serif';
   element.style.lineHeight = '1.6';
   element.style.textAlign = 'justify';
-  
-  // We need to append it to the body temporarily for jsPDF to render it
   element.style.position = 'absolute';
   element.style.left = '-9999px';
   document.body.appendChild(element);
@@ -43,29 +50,26 @@ export const generateContractPDF = async (data: CounterGuaranteeData, customTemp
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
-    format: 'letter'
+    format: 'letter',
   });
 
   try {
     await doc.html(element, {
-      callback: function (doc) {
-        const typeLabel = data.type === ContractType.COUNTER_GUARANTEE_PRIVATE ? 'Documento Privado' : 'Escritura Pública';
-        const policiesLabel = data.policies.map(p => p.number).join(' y ');
-        const entityLabel = data.principal.entityName || data.principal.name;
-        const fileName = `${entityLabel} -${typeLabel}- ${policiesLabel}.pdf`;
-        
-        doc.save(fileName);
-        document.body.removeChild(element);
-      },
+      callback: () => undefined,
       x: 20,
       y: 20,
-      width: 170, // target width in the PDF documents
-      windowWidth: 800, // window width in CSS pixels
-      autoPaging: 'text'
+      width: 170,
+      windowWidth: 800,
+      autoPaging: 'text',
     });
-  } catch (error) {
-    console.error('Error generating PDF:', error);
+
+    const blob = doc.output('blob');
+    return {
+      blob,
+      fileName: `${buildBaseFileName(data)}.pdf`,
+      contentType: 'application/pdf',
+    };
+  } finally {
     document.body.removeChild(element);
-    throw error;
   }
-};
+}
