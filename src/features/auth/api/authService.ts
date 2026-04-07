@@ -24,7 +24,11 @@ export const authService = {
       return inFlightSessionRequest;
     }
 
-    inFlightSessionRequest = (async () => {
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Session request timed out')), 10_000),
+    );
+
+    inFlightSessionRequest = Promise.race([timeout, (async () => {
       const { data, error } = await supabase.auth.getSession();
 
       if (error) {
@@ -71,7 +75,7 @@ export const authService = {
           canViewAuditLog: membership.role === 'owner' || membership.role === 'admin',
         },
       };
-    })();
+    })()]);
 
     try {
       return await inFlightSessionRequest;

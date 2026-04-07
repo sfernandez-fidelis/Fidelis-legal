@@ -4,13 +4,13 @@ import { PageLoader } from '../../../shared/components/PageLoader';
 
 export function RequireAuth() {
   const location = useLocation();
-  const { data: user, isLoading } = useSessionQuery();
+  const { data: user, isLoading, isError } = useSessionQuery();
 
   if (isLoading) {
     return <PageLoader message="Cargando sesión..." />;
   }
 
-  if (!user) {
+  if (isError || !user) {
     return <Navigate replace state={{ from: location }} to="/login" />;
   }
 
