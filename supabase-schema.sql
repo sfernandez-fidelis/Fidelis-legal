@@ -414,6 +414,8 @@ $$;
 create or replace function app.log_activity()
 returns trigger
 language plpgsql
+security definer
+set search_path = public
 as $$
 declare
   target record;
