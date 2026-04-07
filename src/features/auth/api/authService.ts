@@ -25,7 +25,7 @@ export const authService = {
     }
 
     const timeout = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Session request timed out')), 10_000),
+      setTimeout(() => reject(new Error('Session request timed out')), 15_000),
     );
 
     inFlightSessionRequest = Promise.race([timeout, (async () => {
