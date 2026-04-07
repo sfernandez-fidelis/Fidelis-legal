@@ -12,9 +12,19 @@ function SessionSync() {
   const client = useQueryClient();
 
   useEffect(() => {
-    const { data } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!session?.user) {
         client.setQueryData(queryKeys.session(), null);
+        return;
+      }
+
+      // TOKEN_REFRESHED: the SDK just renewed the JWT internally.
+      // Don't call getSessionUser() here — that would try to acquire
+      // the same internal Supabase lock that is still held by the
+      // refresh, causing a >15 s wait and a timeout error.
+      // Simply invalidate so React Query refetches when needed.
+      if (event === 'TOKEN_REFRESHED') {
+        await client.invalidateQueries({ queryKey: queryKeys.session() });
         return;
       }
 

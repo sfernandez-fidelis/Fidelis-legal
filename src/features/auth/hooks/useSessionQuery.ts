@@ -8,7 +8,8 @@ export function useSessionQuery() {
     queryFn: authService.getSessionUser,
     staleTime: Infinity,
     gcTime: 60 * 60 * 1000,
-    retry: false,
+    retry: 1,
+    retryDelay: 3_000,
   });
 }
 
