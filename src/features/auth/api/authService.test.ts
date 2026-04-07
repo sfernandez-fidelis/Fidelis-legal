@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => {
   const auth = {
     getSession: vi.fn(),
+    getUser: vi.fn(),
     signInWithOAuth: vi.fn(),
     signOut: vi.fn(),
   };
@@ -29,8 +30,8 @@ describe('authService', () => {
   });
 
   it('returns null when no user session exists', async () => {
-    mocks.auth.getSession.mockResolvedValue({
-      data: { session: null },
+    mocks.auth.getUser.mockResolvedValue({
+      data: { user: null },
       error: null,
     });
 
@@ -44,8 +45,8 @@ describe('authService', () => {
       user_metadata: { full_name: 'Workspace Owner' },
     };
 
-    mocks.auth.getSession.mockResolvedValue({
-      data: { session: { user } },
+    mocks.auth.getUser.mockResolvedValue({
+      data: { user },
       error: null,
     });
 
@@ -139,8 +140,8 @@ describe('authService', () => {
       user_metadata: { full_name: 'Workspace Owner' },
     };
 
-    mocks.auth.getSession.mockResolvedValue({
-      data: { session: { user } },
+    mocks.auth.getUser.mockResolvedValue({
+      data: { user },
       error: null,
     });
 
