@@ -84,6 +84,11 @@ export const teamService = {
     const token = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString();
 
+    console.log('[TeamService] Inviting member:', { organizationId, email, role: payload.role, invited_by: actorId });
+
+    if (!organizationId) throw new Error('Missing organizationId');
+    if (!actorId) throw new Error('Missing actorId');
+
     const { error } = await supabase.from('organization_invitations').insert({
       organization_id: organizationId,
       email,
@@ -94,6 +99,7 @@ export const teamService = {
     });
 
     if (error) {
+      console.error('[TeamService] Error inserting invitation:', error);
       throw error;
     }
 

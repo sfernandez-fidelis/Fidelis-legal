@@ -122,13 +122,13 @@ export function DocumentCreatePage() {
             onClick={() => setSearchParams({ type })}
             type="button"
           >
-            <p className="text-xs uppercase tracking-[0.25em]">{type.replaceAll('_', ' ')}</p>
+            <p className="text-xs uppercase tracking-[0.25em]">{type === ContractType.COUNTER_GUARANTEE_PRIVATE ? 'Contragarantía privada' : type === ContractType.COUNTER_GUARANTEE_PUBLIC ? 'Contragarantía pública' : 'Garantía hipotecaria'}</p>
             <p className="mt-3 text-lg font-medium">
               {type === ContractType.COUNTER_GUARANTEE_PRIVATE
-                ? 'Contragarantía privada'
+                ? 'Documento Privado'
                 : type === ContractType.COUNTER_GUARANTEE_PUBLIC
-                  ? 'Contragarantía pública'
-                  : 'Garantía hipotecaria'}
+                  ? 'Escritura Pública'
+                  : 'Constitución Hipotecaria'}
             </p>
           </button>
         ))}

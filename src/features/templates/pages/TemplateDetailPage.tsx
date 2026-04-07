@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Eye, History, Save, Send, Trash2, Undo2 } from 'lucide-react';
+import { ArrowLeft, Eye, History, Maximize2, Minimize2, Save, Send, Trash2, Undo2 } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { EditorContent, useEditor } from '@tiptap/react';
 import Highlight from '@tiptap/extension-highlight';
@@ -42,6 +42,7 @@ export function TemplateDetailPage() {
   const [previewEnabled, setPreviewEnabled] = useState(false);
   const [baselineContent, setBaselineContent] = useState('');
   const [editorHtml, setEditorHtml] = useState('');
+  const [isPreviewMaximized, setIsPreviewMaximized] = useState(false);
 
   const template = templateQuery.data;
   const previewDataQuery = useTemplatePreviewData(
@@ -197,25 +198,47 @@ export function TemplateDetailPage() {
               ) : null}
             </div>
 
-            <div className="overflow-hidden rounded-[28px] border border-stone-200 bg-white shadow-sm">
+            <div 
+              className={`overflow-hidden rounded-[28px] border border-stone-200 bg-white shadow-sm transition-all ${
+                isPreviewMaximized 
+                  ? 'fixed inset-6 z-[60] flex flex-col shadow-2xl ring-1 ring-black/5' 
+                  : ''
+              }`}
+            >
+              {isPreviewMaximized && (
+                <div 
+                  className="fixed inset-0 z-[-1] bg-stone-900/40 backdrop-blur-sm"
+                  onClick={() => setIsPreviewMaximized(false)}
+                />
+              )}
               <div className="flex items-center justify-between border-b border-stone-200 px-5 py-4">
                 <div>
                   <h2 className="text-lg font-medium text-stone-900">Vista previa</h2>
                   <p className="text-sm text-stone-500">Los datos de prueba se cargan al solicitarlo.</p>
                 </div>
-                <button
-                  className="rounded-2xl border border-stone-200 px-4 py-3 text-sm font-medium text-stone-700 transition hover:bg-stone-50"
-                  onClick={() => setPreviewEnabled(true)}
-                  type="button"
-                >
-                  <span className="inline-flex items-center gap-2">
-                    <Eye size={16} />
-                    {previewEnabled ? 'Actualizar vista previa' : 'Cargar vista de prueba'}
-                  </span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    className="rounded-2xl border border-stone-200 px-4 py-3 text-sm font-medium text-stone-700 transition hover:bg-stone-50"
+                    onClick={() => setPreviewEnabled(true)}
+                    type="button"
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      <Eye size={16} />
+                      {previewEnabled ? 'Actualizar vista' : 'Cargar prueba'}
+                    </span>
+                  </button>
+                  <button
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-stone-200 text-stone-700 transition hover:bg-stone-50"
+                    onClick={() => setIsPreviewMaximized(!isPreviewMaximized)}
+                    title={isPreviewMaximized ? "Contraer" : "Expandir vista"}
+                    type="button"
+                  >
+                    {isPreviewMaximized ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+                  </button>
+                </div>
               </div>
 
-              <div className="h-[760px]">
+              <div className={isPreviewMaximized ? 'flex-1 overflow-hidden' : 'h-[760px]'}>
                 {previewEnabled && previewDataQuery.data ? (
                   <Suspense fallback={<div className="p-8 text-sm text-stone-500">Cargando vista previa...</div>}>
                     <LivePreview

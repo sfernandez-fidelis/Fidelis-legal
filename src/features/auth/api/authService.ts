@@ -101,17 +101,30 @@ export async function getSharedAppSession(user: User): Promise<AppSession> {
     return existing;
   }
 
+  console.log('[AuthService] No shared session found for', user.id, '- starting build.');
+
   const promise = (async () => {
     try {
-      return await buildAppSession(user);
-    } finally {
-      // Clear after a small buffer to handle rapid sequential events if needed,
-      // but long enough that concurrent calls during the build phase share the promise.
-      setTimeout(() => buildingSessions.delete(user.id), 5000);
+      const session = await buildAppSession(user);
+      // We keep the resolved session in the map for a while to avoid rapid rebuilds
+      // on every micro-re-render or auth state change event.
+      return session;
+    } catch (err) {
+      // Re-throw and immediately delete from cache so next attempt can try again
+      buildingSessions.delete(user.id);
+      throw err;
     }
   })();
 
   buildingSessions.set(user.id, promise);
+  
+  // Keep it cached for 30 seconds to prevent "flapping" during initialization
+  setTimeout(() => {
+    if (buildingSessions.get(user.id) === promise) {
+      buildingSessions.delete(user.id);
+    }
+  }, 30000);
+
   return promise;
 }
 

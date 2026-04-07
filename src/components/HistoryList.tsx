@@ -18,8 +18,8 @@ export default function HistoryList({ items, onDelete, onDownloadPDF, onDownload
     return (
       <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 py-20 text-gray-400">
         <FileText className="mb-4 opacity-20" size={48} />
-        <p className="text-lg font-medium">No hay documentos generados aÃºn</p>
-        <p className="text-sm">Completa el formulario para crear tu primera contragarantÃ­a</p>
+        <p className="text-lg font-medium">No hay documentos generados aún</p>
+        <p className="text-sm">Completa el formulario para crear tu primera contragarantía</p>
       </div>
     );
   }
@@ -41,7 +41,7 @@ export default function HistoryList({ items, onDelete, onDownloadPDF, onDownload
                   to={`/documents/${item.id}`}
                 >
                   {item.principal.entityName || item.principal.name} -
-                  {item.type === ContractType.COUNTER_GUARANTEE_PRIVATE ? 'Documento Privado' : 'Escritura PÃºblica'}-{' '}
+                  {item.type === ContractType.COUNTER_GUARANTEE_PRIVATE ? 'Documento Privado' : 'Escritura Pública'}-{' '}
                   {item.policies.map((policy) => policy.number).join(' y ')}
                 </Link>
               </div>
@@ -56,7 +56,7 @@ export default function HistoryList({ items, onDelete, onDownloadPDF, onDownload
                 </div>
                 <div className="flex items-center gap-1">
                   <FileText size={14} />
-                  <span>{item.policies.length} pÃ³lizas</span>
+                  <span>{item.policies.length} pólizas</span>
                 </div>
               </div>
             </div>
