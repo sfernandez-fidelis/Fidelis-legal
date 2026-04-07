@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Shield, UserPlus, Users } from 'lucide-react';
+import { Check, ClipboardCopy, Shield, UserPlus, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageErrorState } from '../../../shared/components/PageErrorState';
 import { usePermissions } from '../../auth/hooks/usePermissions';
@@ -16,6 +16,8 @@ export function TeamPage() {
   const updateMemberRole = useUpdateMemberRole();
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<(typeof editableRoles)[number]>('editor');
+  const [pendingLink, setPendingLink] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const activeMembers = useMemo(() => membersQuery.data ?? [], [membersQuery.data]);
 
@@ -73,21 +75,59 @@ export function TeamPage() {
               className="rounded-2xl bg-stone-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-black disabled:opacity-60"
               disabled={!email.trim() || inviteMember.isPending}
               onClick={async () => {
+                let token: string;
                 try {
-                  const token = await inviteMember.mutateAsync({ email, role });
-                  await navigator.clipboard.writeText(`${window.location.origin}/login?invite=${token}`);
-                  toast.success('Invitación creada y enlace copiado');
-                  setEmail('');
-                  setRole('editor');
+                  token = await inviteMember.mutateAsync({ email, role });
                 } catch {
-                  toast.error('No se pudo crear la invitación');
+                  toast.error('No se pudo crear la invitación. Verifica tu conexión e inténtalo de nuevo.');
+                  return;
+                }
+                const link = `${window.location.origin}/login?invite=${token}`;
+                setPendingLink(link);
+                setCopied(false);
+                setEmail('');
+                setRole('editor');
+                try {
+                  await navigator.clipboard.writeText(link);
+                  setCopied(true);
+                  toast.success('Invitación creada y enlace copiado al portapapeles');
+                } catch {
+                  toast.success('Invitación creada. Copia el enlace que aparece abajo y compártelo manualmente.');
                 }
               }}
               type="button"
             >
-              Enviar invitación
+              {inviteMember.isPending ? 'Creando...' : 'Generar invitación'}
             </button>
           </div>
+          {pendingLink ? (
+            <div className="mt-4 flex items-center gap-3 rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3">
+              <p className="min-w-0 flex-1 truncate font-mono text-xs text-stone-700">{pendingLink}</p>
+              <button
+                className="flex shrink-0 items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs font-medium text-stone-700 transition hover:bg-stone-100"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(pendingLink);
+                    setCopied(true);
+                    toast.success('Enlace copiado');
+                  } catch {
+                    toast.error('No se pudo copiar. Selecciona el texto manualmente.');
+                  }
+                }}
+                type="button"
+              >
+                {copied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <ClipboardCopy className="h-3.5 w-3.5" />}
+                {copied ? 'Copiado' : 'Copiar enlace'}
+              </button>
+              <button
+                className="shrink-0 text-xs text-stone-400 hover:text-stone-600"
+                onClick={() => { setPendingLink(null); setCopied(false); }}
+                type="button"
+              >
+                Cerrar
+              </button>
+            </div>
+          ) : null}
         </section>
       ) : (
         <section className="rounded-[28px] border border-stone-200 bg-stone-50 p-6 text-sm text-stone-600">
