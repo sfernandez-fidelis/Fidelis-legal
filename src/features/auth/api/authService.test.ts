@@ -131,4 +131,122 @@ describe('authService', () => {
     expect(mocks.auth.signInWithOAuth).toHaveBeenCalled();
     expect(mocks.auth.signOut).toHaveBeenCalled();
   });
+
+  it('reuses the existing organization when bootstrap hits a duplicate slug conflict', async () => {
+    const user = {
+      id: 'user-1',
+      email: 'owner@example.com',
+      user_metadata: { full_name: 'Workspace Owner' },
+    };
+
+    mocks.auth.getSession.mockResolvedValue({
+      data: { session: { user } },
+      error: null,
+    });
+
+    const profilesUpsert = vi.fn(() => ({
+      select: vi.fn(() => ({
+        single: vi.fn().mockResolvedValue({
+          data: { id: user.id, email: user.email, full_name: 'Workspace Owner' },
+          error: null,
+        }),
+      })),
+    }));
+
+    const invitationSelect = vi.fn(() => ({
+      eq: vi.fn(() => ({
+        is: vi.fn(() => ({
+          or: vi.fn().mockResolvedValue({
+            data: [],
+            error: null,
+          }),
+        })),
+      })),
+    }));
+
+    const membershipSelect = vi
+      .fn()
+      .mockImplementationOnce(() => ({
+        eq: vi.fn(() => ({
+          is: vi.fn(() => ({
+            order: vi.fn(() => ({
+              limit: vi.fn(() => ({
+                maybeSingle: vi.fn().mockResolvedValue({
+                  data: null,
+                  error: null,
+                }),
+              })),
+            })),
+          })),
+        })),
+      }));
+
+    const membershipUpsert = vi.fn().mockResolvedValue({ error: null });
+
+    const organizationsInsert = vi.fn(() => ({
+      select: vi.fn(() => ({
+        single: vi.fn().mockResolvedValue({
+          data: null,
+          error: {
+            code: '23505',
+            message: 'duplicate key value violates unique constraint "organizations_slug_key"',
+          },
+        }),
+      })),
+    }));
+
+    const organizationsSelect = vi.fn(() => ({
+      eq: vi.fn(() => ({
+        single: vi.fn().mockResolvedValue({
+          data: {
+            id: 'org-1',
+            name: 'Workspace Owner Workspace',
+            slug: 'workspace-owner-user-1',
+          },
+          error: null,
+        }),
+      })),
+    }));
+
+    mocks.from.mockImplementation((table: string) => {
+      if (table === 'profiles') {
+        return { upsert: profilesUpsert };
+      }
+
+      if (table === 'organization_invitations') {
+        return { select: invitationSelect };
+      }
+
+      if (table === 'organization_members') {
+        return {
+          select: membershipSelect,
+          upsert: membershipUpsert,
+        };
+      }
+
+      if (table === 'organizations') {
+        return {
+          insert: organizationsInsert,
+          select: organizationsSelect,
+        };
+      }
+
+      throw new Error(`Unexpected table: ${table}`);
+    });
+
+    const session = await authService.getSessionUser();
+
+    expect(session?.activeOrganization.id).toBe('org-1');
+    expect(session?.membership.role).toBe('owner');
+    expect(organizationsInsert).toHaveBeenCalledTimes(1);
+    expect(organizationsSelect).toHaveBeenCalledTimes(1);
+    expect(membershipUpsert).toHaveBeenCalledWith(
+      {
+        organization_id: 'org-1',
+        user_id: user.id,
+        role: 'owner',
+      },
+      { onConflict: 'organization_id,user_id' },
+    );
+  });
 });

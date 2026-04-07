@@ -2,6 +2,8 @@ import type { User } from '@supabase/supabase-js';
 import { supabase } from '../../../lib/supabase/client';
 import type { AppSession } from '../../../types';
 
+let inFlightSessionRequest: Promise<AppSession | null> | null = null;
+
 function getDisplayName(user: User) {
   return user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Workspace principal';
 }
@@ -18,52 +20,64 @@ function toSlug(value: string) {
 
 export const authService = {
   async getSessionUser(): Promise<AppSession | null> {
-    const { data, error } = await supabase.auth.getSession();
-
-    if (error) {
-      throw error;
+    if (inFlightSessionRequest) {
+      return inFlightSessionRequest;
     }
 
-    const user = data.session?.user;
+    inFlightSessionRequest = (async () => {
+      const { data, error } = await supabase.auth.getSession();
 
-    if (!user) {
-      return null;
+      if (error) {
+        throw error;
+      }
+
+      const user = data.session?.user;
+
+      if (!user) {
+        return null;
+      }
+
+      const profile = await ensureProfile(user);
+      await acceptPendingInvitations(user);
+      let membership = await fetchMembership(user.id);
+
+      if (!membership) {
+        membership = await bootstrapWorkspace(user);
+      }
+
+      return {
+        user: {
+          id: user.id,
+          email: user.email,
+          user_metadata: user.user_metadata,
+        },
+        profile: {
+          id: profile.id,
+          email: profile.email,
+          fullName: profile.full_name,
+        },
+        membership: {
+          organizationId: membership.organization_id,
+          role: membership.role,
+        },
+        activeOrganization: {
+          id: membership.organizations.id,
+          name: membership.organizations.name,
+          slug: membership.organizations.slug,
+        },
+        permissions: {
+          canManageOrganization: membership.role === 'owner' || membership.role === 'admin',
+          canEditContent: membership.role === 'owner' || membership.role === 'admin' || membership.role === 'editor',
+          canViewAuditLog: membership.role === 'owner' || membership.role === 'admin',
+        },
+      };
+    })();
+
+    try {
+      return await inFlightSessionRequest;
+    } finally {
+      inFlightSessionRequest = null;
     }
-
-    const profile = await ensureProfile(user);
-    await acceptPendingInvitations(user);
-    let membership = await fetchMembership(user.id);
-
-    if (!membership) {
-      membership = await bootstrapWorkspace(user);
-    }
-
-    return {
-      user: {
-        id: user.id,
-        email: user.email,
-        user_metadata: user.user_metadata,
-      },
-      profile: {
-        id: profile.id,
-        email: profile.email,
-        fullName: profile.full_name,
-      },
-      membership: {
-        organizationId: membership.organization_id,
-        role: membership.role,
-      },
-      activeOrganization: {
-        id: membership.organizations.id,
-        name: membership.organizations.name,
-        slug: membership.organizations.slug,
-      },
-      permissions: {
-        canManageOrganization: membership.role === 'owner' || membership.role === 'admin',
-        canEditContent: membership.role === 'owner' || membership.role === 'admin' || membership.role === 'editor',
-        canViewAuditLog: membership.role === 'owner' || membership.role === 'admin',
-      },
-    };
   },
 
   async login() {
@@ -188,7 +202,9 @@ async function acceptPendingInvitations(user: User) {
 async function bootstrapWorkspace(user: User) {
   const baseName = getDisplayName(user);
   const slug = `${toSlug(baseName) || 'workspace'}-${user.id.slice(0, 8)}`;
-  const { data: organization, error: organizationError } = await supabase
+  let organization: { id: string; name: string; slug: string } | null = null;
+
+  const { data: insertedOrganization, error: organizationError } = await supabase
     .from('organizations')
     .insert({
       name: `${baseName} Workspace`,
@@ -199,14 +215,33 @@ async function bootstrapWorkspace(user: User) {
     .single();
 
   if (organizationError) {
-    throw organizationError;
+    if (organizationError.code !== '23505') {
+      throw organizationError;
+    }
+
+    const { data: existingOrganization, error: existingOrganizationError } = await supabase
+      .from('organizations')
+      .select('id, name, slug')
+      .eq('slug', slug)
+      .single();
+
+    if (existingOrganizationError) {
+      throw existingOrganizationError;
+    }
+
+    organization = existingOrganization;
+  } else {
+    organization = insertedOrganization;
   }
 
-  const { error: membershipError } = await supabase.from('organization_members').insert({
-    organization_id: organization.id,
-    user_id: user.id,
-    role: 'owner',
-  });
+  const { error: membershipError } = await supabase.from('organization_members').upsert(
+    {
+      organization_id: organization.id,
+      user_id: user.id,
+      role: 'owner',
+    },
+    { onConflict: 'organization_id,user_id' },
+  );
 
   if (membershipError) {
     throw membershipError;
