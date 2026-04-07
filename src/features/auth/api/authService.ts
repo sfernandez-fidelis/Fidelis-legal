@@ -236,16 +236,23 @@ async function acceptPendingInvitations(user: User) {
   const normalizedEmail = user.email.toLowerCase();
   const { data: invites, error } = await supabase
     .from('organization_invitations')
-    .select('id, organization_id, role')
+    .select('id, organization_id, role, expires_at')
     .eq('email', normalizedEmail)
-    .is('accepted_at', null)
-    .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`);
+    .is('accepted_at', null);
 
   if (error) {
+    console.error('[AuthService] Error fetching pending invitations:', error);
     throw error;
   }
 
-  for (const invite of invites ?? []) {
+  // Filter out expired invitations in memory to avoid complex .or() filter bugs in PostgREST
+  const now = new Date();
+  const validInvites = (invites ?? []).filter(invite => 
+    !invite.expires_at || new Date(invite.expires_at) > now
+  );
+
+  for (const invite of validInvites) {
+    console.log(`[AuthService] Accepting invitation for org ${invite.organization_id} with role ${invite.role}`);
     const { error: membershipError } = await supabase.from('organization_members').upsert(
       {
         organization_id: invite.organization_id,

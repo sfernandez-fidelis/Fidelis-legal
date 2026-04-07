@@ -27,9 +27,15 @@ import { authService } from './authService';
 describe('authService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default getSession to return no session unless overridden
+    mocks.auth.getSession.mockResolvedValue({ data: { session: null }, error: null });
   });
 
   it('returns null when no user session exists', async () => {
+    mocks.auth.getSession.mockResolvedValue({
+      data: { session: null },
+      error: null,
+    });
     mocks.auth.getUser.mockResolvedValue({
       data: { user: null },
       error: null,
@@ -45,8 +51,8 @@ describe('authService', () => {
       user_metadata: { full_name: 'Workspace Owner' },
     };
 
-    mocks.auth.getUser.mockResolvedValue({
-      data: { user },
+    mocks.auth.getSession.mockResolvedValue({
+      data: { session: { user } as any },
       error: null,
     });
 
@@ -64,12 +70,10 @@ describe('authService', () => {
       organization_invitations: () => ({
         select: vi.fn(() => ({
           eq: vi.fn(() => ({
-            is: vi.fn(() => ({
-              or: vi.fn().mockResolvedValue({
-                data: [{ id: 'invite-1', organization_id: 'org-1', role: 'admin' }],
-                error: null,
-              }),
-            })),
+            is: vi.fn().mockResolvedValue({
+              data: [{ id: 'invite-1', organization_id: 'org-1', role: 'admin', expires_at: null }],
+              error: null,
+            }),
           })),
         })),
         update: vi.fn(() => ({
@@ -140,8 +144,8 @@ describe('authService', () => {
       user_metadata: { full_name: 'Workspace Owner' },
     };
 
-    mocks.auth.getUser.mockResolvedValue({
-      data: { user },
+    mocks.auth.getSession.mockResolvedValue({
+      data: { session: { user } as any },
       error: null,
     });
 
@@ -156,12 +160,10 @@ describe('authService', () => {
 
     const invitationSelect = vi.fn(() => ({
       eq: vi.fn(() => ({
-        is: vi.fn(() => ({
-          or: vi.fn().mockResolvedValue({
-            data: [],
-            error: null,
-          }),
-        })),
+        is: vi.fn().mockResolvedValue({
+          data: [],
+          error: null,
+        }),
       })),
     }));
 
