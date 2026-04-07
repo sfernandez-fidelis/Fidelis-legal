@@ -30,7 +30,7 @@ interface DocumentEditorProps {
   onSaveContact?: (party: PartyDetails, role: 'principal' | 'guarantor') => Promise<void> | void;
 }
 
-const steps = ['Overview', 'Parties', 'Policies', 'Final Review'] as const;
+const steps = ['Resumen', 'Partes', 'Políticas', 'Revisión final'] as const;
 
 function buildInitialData(initialType: ContractType, initialData?: CounterGuaranteeData): CounterGuaranteeData {
   if (initialData) {
@@ -54,12 +54,12 @@ function buildInitialData(initialType: ContractType, initialData?: CounterGuaran
 function getSaveLabel(saveIndicator: SaveIndicatorState) {
   switch (saveIndicator) {
     case 'saving':
-      return 'Saving...';
+      return 'Guardando...';
     case 'saved':
-      return 'Saved';
+      return 'Guardado';
     case 'unsaved':
     default:
-      return 'Unsaved changes';
+      return 'Cambios sin guardar';
   }
 }
 
@@ -112,12 +112,12 @@ export function DocumentEditor({
             <div>
               <div className="flex items-center gap-3">
                 <h1 className="text-3xl font-serif italic text-stone-900">
-                  {mode === 'create' ? 'Create document' : 'Edit document'}
+                  {mode === 'create' ? 'Crear documento' : 'Editar documento'}
                 </h1>
                 <DocumentStatusBadge status={data.status} />
               </div>
               <p className="mt-1 text-sm text-stone-500">
-                Structured drafting with version-safe updates and a live preview.
+                Redacción estructurada con actualizaciones seguras de versión y vista previa en vivo.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -133,7 +133,7 @@ export function DocumentEditor({
                 >
                   <span className="inline-flex items-center gap-2">
                     <Copy size={15} />
-                    Duplicate
+                    Duplicar
                   </span>
                 </button>
               ) : null}
@@ -143,7 +143,7 @@ export function DocumentEditor({
                   onClick={() => onRestore?.(data)}
                   type="button"
                 >
-                  Restore
+                  Restaurar
                 </button>
               ) : (
                 permissions.canEditContent && data.id ? (
@@ -154,7 +154,7 @@ export function DocumentEditor({
                   >
                     <span className="inline-flex items-center gap-2">
                       <FolderArchive size={15} />
-                      Archive
+                      Archivar
                     </span>
                   </button>
                 ) : null
@@ -185,15 +185,15 @@ export function DocumentEditor({
         <div className="space-y-6 p-6">
           {step === 0 ? (
             <div className="grid gap-4 md:grid-cols-2">
-              <Field label="Document title">
+              <Field label="Título del documento">
                 <input
                   className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500"
                   onChange={(event) => updateData({ ...data, title: event.target.value })}
-                  placeholder="Use a client-facing title"
+                  placeholder="Use un título orientado al cliente"
                   value={data.title ?? ''}
                 />
               </Field>
-              <Field label="Contract date">
+              <Field label="Fecha del contrato">
                 <input
                   className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500"
                   onChange={(event) => updateData({ ...data, contractDate: event.target.value })}
@@ -201,19 +201,19 @@ export function DocumentEditor({
                   value={data.contractDate}
                 />
               </Field>
-              <Field label="Beneficiary">
+              <Field label="Beneficiario">
                 <input
                   className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500"
                   onChange={(event) => updateData({ ...data, beneficiaryName: event.target.value })}
-                  placeholder="Beneficiary name"
+                  placeholder="Nombre del beneficiario"
                   value={data.beneficiaryName}
                 />
               </Field>
-              <Field label="Notifications">
+              <Field label="Notificaciones">
                 <textarea
                   className="min-h-28 w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500"
                   onChange={(event) => updateData({ ...data, notificationAddress: event.target.value })}
-                  placeholder="Notification address"
+                  placeholder="Dirección de notificación"
                   value={data.notificationAddress}
                 />
               </Field>
@@ -228,12 +228,12 @@ export function DocumentEditor({
                 onSaveContact={(party) => onSaveContact?.(party, 'principal')}
                 party={data.principal}
                 suggestionTypes={['principal', 'representative', 'entity', 'notary']}
-                title="Principal party"
+                title="Parte principal"
               />
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-medium text-stone-900">Additional guarantors</h3>
-                  <p className="text-sm text-stone-500">Keep secondary parties structured for future revisions.</p>
+                  <h3 className="text-lg font-medium text-stone-900">Fiadores adicionales</h3>
+                  <p className="text-sm text-stone-500">Mantenga las partes secundarias estructuradas para futuras revisiones.</p>
                 </div>
                 <button
                   className="rounded-full bg-brand-50 px-4 py-2 text-sm font-medium text-brand-700 transition hover:bg-brand-100"
@@ -243,7 +243,7 @@ export function DocumentEditor({
                 >
                   <span className="inline-flex items-center gap-2">
                     <Plus size={15} />
-                    Add guarantor
+                    Agregar fiador
                   </span>
                 </button>
               </div>
@@ -260,7 +260,7 @@ export function DocumentEditor({
                   onRemove={() => updateData({ ...data, guarantors: data.guarantors.filter((_, itemIndex) => itemIndex !== index) })}
                   party={guarantor}
                   suggestionTypes={['guarantor', 'representative', 'entity', 'notary']}
-                  title={`Guarantor ${index + 1}`}
+                  title={`Fiador ${index + 1}`}
                 />
               ))}
             </div>
@@ -270,8 +270,8 @@ export function DocumentEditor({
             <div className="space-y-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-medium text-stone-900">Policies</h3>
-                  <p className="text-sm text-stone-500">Each policy remains queryable for search and reporting.</p>
+                  <h3 className="text-lg font-medium text-stone-900">Políticas</h3>
+                  <p className="text-sm text-stone-500">Cada política permanece consultable para búsqueda y reportes.</p>
                 </div>
                 <button
                   className="rounded-full bg-brand-50 px-4 py-2 text-sm font-medium text-brand-700 transition hover:bg-brand-100"
@@ -281,7 +281,7 @@ export function DocumentEditor({
                 >
                   <span className="inline-flex items-center gap-2">
                     <Plus size={15} />
-                    Add policy
+                    Agregar política
                   </span>
                 </button>
               </div>
@@ -304,8 +304,8 @@ export function DocumentEditor({
           {step === 3 ? (
             <div className="space-y-5">
               <div className="rounded-3xl border border-stone-200 bg-stone-50 p-5">
-                <h3 className="text-lg font-medium text-stone-900">Signature block</h3>
-                <p className="mt-1 text-sm text-stone-500">Finalize signers and move the document to its next milestone.</p>
+                <h3 className="text-lg font-medium text-stone-900">Bloque de firmas</h3>
+                <p className="mt-1 text-sm text-stone-500">Finalice los firmantes y mueva el documento a su siguiente hito.</p>
                 <div className="mt-4 space-y-3">
                   {data.signatureNames.map((name, index) => (
                     <div className="flex gap-3" key={`${name}-${index}`}>
@@ -316,7 +316,7 @@ export function DocumentEditor({
                           signatureNames[index] = event.target.value;
                           updateData({ ...data, signatureNames });
                         }}
-                        placeholder="Signer name"
+                        placeholder="Nombre del firmante"
                         value={name}
                       />
                       <button
@@ -330,7 +330,7 @@ export function DocumentEditor({
                         }
                         type="button"
                       >
-                        Remove
+                        Eliminar
                       </button>
                     </div>
                   ))}
@@ -340,7 +340,7 @@ export function DocumentEditor({
                     onClick={addSignature}
                     type="button"
                   >
-                    Add signer
+                    Agregar firmante
                   </button>
                 </div>
               </div>
@@ -357,7 +357,7 @@ export function DocumentEditor({
           >
             <span className="inline-flex items-center gap-2">
               <ChevronLeft size={16} />
-              Previous
+              Anterior
             </span>
           </button>
 
@@ -370,7 +370,7 @@ export function DocumentEditor({
             >
               <span className="inline-flex items-center gap-2">
                 <Save size={16} />
-                Save now
+                Guardar ahora
               </span>
             </button>
             <button
@@ -379,7 +379,7 @@ export function DocumentEditor({
               onClick={() => onMarkReady?.(data)}
               type="button"
             >
-              Mark ready
+              Marcar listo
             </button>
             <button
               className="rounded-xl border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-100"
@@ -389,7 +389,7 @@ export function DocumentEditor({
             >
               <span className="inline-flex items-center gap-2">
                 <RotateCw size={16} />
-                Regenerate PDF
+                Regenerar PDF
               </span>
             </button>
             <button
@@ -399,7 +399,7 @@ export function DocumentEditor({
               type="button"
             >
               <span className="inline-flex items-center gap-2">
-                Next
+                Siguiente
                 <ChevronRight size={16} />
               </span>
             </button>
@@ -409,7 +409,7 @@ export function DocumentEditor({
 
       <aside className="space-y-6">
         <div className="rounded-[28px] border border-stone-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-medium text-stone-900">Workflow actions</h2>
+          <h2 className="text-lg font-medium text-stone-900">Acciones de flujo de trabajo</h2>
           <div className="mt-4 grid gap-3">
             <button
               className="rounded-2xl border border-stone-200 px-4 py-3 text-left text-sm text-stone-700 transition hover:bg-stone-50"
@@ -419,7 +419,7 @@ export function DocumentEditor({
             >
               <span className="inline-flex items-center gap-2">
                 <FileText size={16} />
-                Generate PDF
+                Generar PDF
               </span>
             </button>
             <button
@@ -430,7 +430,7 @@ export function DocumentEditor({
             >
               <span className="inline-flex items-center gap-2">
                 <FileText size={16} />
-                Generate Word
+                Generar Word
               </span>
             </button>
           </div>

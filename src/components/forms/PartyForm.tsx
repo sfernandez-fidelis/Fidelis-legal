@@ -142,7 +142,7 @@ export default function PartyForm({
             type="button"
           >
             <Search size={14} />
-            Use saved contact
+            Usar contacto guardado
           </button>
           {onSaveContact ? (
             <button
@@ -152,7 +152,7 @@ export default function PartyForm({
               type="button"
             >
               <Save size={14} />
-              {isSavingContact ? 'Saving...' : 'Save as new contact'}
+              {isSavingContact ? 'Guardando...' : 'Guardar como nuevo contacto'}
             </button>
           ) : null}
           <label className="group flex cursor-pointer items-center gap-2">
@@ -166,7 +166,7 @@ export default function PartyForm({
               type="checkbox"
             />
             <span className="text-xs font-medium text-gray-600 transition-colors group-hover:text-brand-600">
-              Represents an entity
+              Representa a una entidad
             </span>
           </label>
           {onRemove ? (
@@ -189,14 +189,14 @@ export default function PartyForm({
             <input
               className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-10 pr-4 text-sm outline-none focus:ring-2 focus:ring-brand-500"
               onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Search by name, company, or document ID..."
+              placeholder="Buscar por nombre, empresa o identificación..."
               type="text"
               value={searchTerm}
             />
           </div>
           <div className="flex items-center gap-2 text-xs uppercase tracking-[0.25em] text-gray-400">
             {debouncedSearch ? <Sparkles size={13} /> : <Clock3 size={13} />}
-            {debouncedSearch ? 'Matching suggestions' : 'Recent contacts'}
+            {debouncedSearch ? 'Coincidencias sugeridas' : 'Contactos recientes'}
           </div>
           <div className="max-h-56 divide-y divide-gray-100 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-sm">
             {suggestionResults.length ? (
@@ -217,13 +217,13 @@ export default function PartyForm({
                       </p>
                     </div>
                     <div className="text-right text-xs text-gray-400">
-                      <p>{contact.metadata.useCount ?? 0} uses</p>
+                      <p>{contact.metadata.useCount ?? 0} usos</p>
                     </div>
                   </div>
                 </button>
               ))
             ) : (
-              <p className="px-4 py-3 text-center text-xs text-gray-500">No contacts found.</p>
+              <p className="px-4 py-3 text-center text-xs text-gray-500">No se encontraron contactos.</p>
             )}
           </div>
         </div>
@@ -236,9 +236,9 @@ export default function PartyForm({
               <CheckCircle2 size={18} />
             </div>
             <div>
-              <p className="text-sm font-medium text-blue-900">Autofill available</p>
+              <p className="text-sm font-medium text-blue-900">Autocompletado disponible</p>
               <p className="mt-1 text-xs text-blue-700">
-                We found saved details for <strong>{autoFillSuggestion.displayName}</strong>. Use them to fill this section instantly.
+                Encontramos detalles guardados para <strong>{autoFillSuggestion.displayName}</strong>. Úselos para llenar esta sección al instante.
               </p>
             </div>
           </div>
@@ -248,14 +248,14 @@ export default function PartyForm({
               onClick={() => setAutoFillSuggestion(null)}
               type="button"
             >
-              Ignore
+              Ignorar
             </button>
             <button
               className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-blue-700"
               onClick={() => handleSelectContact(autoFillSuggestion.party)}
               type="button"
             >
-              Autofill
+              Autocompletar
             </button>
           </div>
         </div>
@@ -263,7 +263,7 @@ export default function PartyForm({
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="md:col-span-2">
-          <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-gray-500">Full name</label>
+          <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-gray-500">Nombre completo</label>
           <input
             className="w-full rounded-lg border border-gray-200 bg-gray-50 p-2.5 outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-brand-500"
             onChange={(event) => onChange({ ...party, name: event.target.value })}
@@ -272,7 +272,7 @@ export default function PartyForm({
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-gray-500">Age</label>
+          <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-gray-500">Edad</label>
           <input
             className="w-full rounded-lg border border-gray-200 bg-gray-50 p-2.5 outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-brand-500"
             onChange={(event) => onChange({ ...party, age: event.target.value })}
@@ -281,7 +281,7 @@ export default function PartyForm({
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-gray-500">Marital status</label>
+          <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-gray-500">Estado civil</label>
           <select
             className="w-full rounded-lg border border-gray-200 bg-gray-50 p-2.5 outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-brand-500"
             onChange={(event) => onChange({ ...party, maritalStatus: event.target.value })}
@@ -292,7 +292,7 @@ export default function PartyForm({
           </select>
         </div>
         <div>
-          <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-gray-500">Profession</label>
+          <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-gray-500">Profesión</label>
           <input
             className="w-full rounded-lg border border-gray-200 bg-gray-50 p-2.5 outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-brand-500"
             onChange={(event) => onChange({ ...party, profession: event.target.value })}
@@ -301,7 +301,7 @@ export default function PartyForm({
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-gray-500">Domicile</label>
+          <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-gray-500">Domicilio</label>
           <input
             className="w-full rounded-lg border border-gray-200 bg-gray-50 p-2.5 outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-brand-500"
             onChange={(event) => onChange({ ...party, domicile: event.target.value })}
@@ -332,11 +332,11 @@ export default function PartyForm({
         <div className="animate-in mt-6 space-y-4 rounded-xl border border-brand-100 bg-brand-50/50 p-6 fade-in slide-in-from-top-2">
           <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-brand-800">
             <Briefcase size={16} />
-            Entity and representation details
+            Detalles de la entidad y representación
           </p>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="md:col-span-2">
-              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-brand-700">Entity name</label>
+              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-brand-700">Nombre de la entidad</label>
               <input
                 className="w-full rounded-lg border border-brand-200 bg-white p-2.5 outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-brand-500"
                 onChange={(event) => onChange({ ...party, entityName: event.target.value })}
@@ -345,7 +345,7 @@ export default function PartyForm({
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-brand-700">Representative role</label>
+              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-brand-700">Rol del representante</label>
               <input
                 className="w-full rounded-lg border border-brand-200 bg-white p-2.5 outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-brand-500"
                 onChange={(event) => onChange({ ...party, role: event.target.value })}
@@ -354,7 +354,7 @@ export default function PartyForm({
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-brand-700">Notary</label>
+              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-brand-700">Notario</label>
               <input
                 className="w-full rounded-lg border border-brand-200 bg-white p-2.5 outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-brand-500"
                 onChange={(event) => onChange({ ...party, notaryName: event.target.value })}
@@ -363,7 +363,7 @@ export default function PartyForm({
               />
             </div>
             <div className="md:col-span-2">
-              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-brand-700">Act date</label>
+              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-brand-700">Fecha del acta</label>
               <input
                 className={`w-full rounded-lg border bg-white p-2.5 outline-none transition-all focus:border-transparent ${actaWarning ? 'border-amber-300 focus:ring-2 focus:ring-amber-500' : 'border-brand-200 focus:ring-2 focus:ring-brand-500'}`}
                 onChange={(event) => onChange({ ...party, actDate: event.target.value })}
@@ -379,7 +379,7 @@ export default function PartyForm({
             </div>
             <div className="grid grid-cols-3 gap-2 md:col-span-2">
               <div>
-                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-brand-700">Registry</label>
+                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-brand-700">Registro</label>
                 <input
                   className="w-full rounded-lg border border-brand-200 bg-white p-2.5 outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-brand-500"
                   onChange={(event) => onChange({ ...party, regNumber: event.target.value })}
@@ -397,7 +397,7 @@ export default function PartyForm({
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-brand-700">Book</label>
+                <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-brand-700">Libro</label>
                 <input
                   className="w-full rounded-lg border border-brand-200 bg-white p-2.5 outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-brand-500"
                   onChange={(event) => onChange({ ...party, regBook: event.target.value })}

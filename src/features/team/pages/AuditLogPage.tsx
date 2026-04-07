@@ -13,7 +13,7 @@ export function AuditLogPage() {
   if (!permissions.canViewAuditLog) {
     return (
       <div className="mx-auto max-w-5xl rounded-[28px] border border-stone-200 bg-stone-50 p-8 text-sm text-stone-600">
-        Audit access is limited to organization admins.
+        El acceso a auditoría está limitado a administradores de la organización.
       </div>
     );
   }
@@ -21,9 +21,9 @@ export function AuditLogPage() {
   if (auditLogQuery.isError) {
     return (
       <PageErrorState
-        message="Recent organization activity could not be loaded."
+        message="La actividad reciente de la organización no se pudo cargar."
         onRetry={() => auditLogQuery.refetch()}
-        title="Unable to load audit log"
+        title="No se pudo cargar el registro de auditoría"
       />
     );
   }
@@ -31,10 +31,10 @@ export function AuditLogPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <header className="rounded-[32px] border border-stone-200 bg-white p-6 shadow-sm">
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-stone-400">Attribution</p>
-        <h1 className="mt-2 text-4xl font-serif italic text-stone-900">Audit log</h1>
+        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-stone-400">Atribución</p>
+        <h1 className="mt-2 text-4xl font-serif italic text-stone-900">Registro de auditoría</h1>
         <p className="mt-2 max-w-3xl text-stone-500">
-          Sensitive changes across documents, templates, files, contacts, and access controls are recorded here.
+          Los cambios sensibles en documentos, plantillas, archivos, contactos y controles de acceso se registran aquí.
         </p>
       </header>
 
@@ -46,7 +46,7 @@ export function AuditLogPage() {
                 <div>
                   <p className="text-sm font-medium text-stone-900">{formatAction(entry.action)}</p>
                   <p className="mt-1 text-sm text-stone-500">
-                    {entry.entityType} • {entry.actorName || 'System'} • {new Date(entry.createdAt).toLocaleString()}
+                    {entry.entityType} • {entry.actorName || 'Sistema'} • {new Date(entry.createdAt).toLocaleString()}
                   </p>
                 </div>
                 <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-stone-500">
@@ -55,7 +55,7 @@ export function AuditLogPage() {
               </div>
             </div>
           ))}
-          {!auditLogQuery.data?.length ? <p className="text-sm text-stone-500">No audit events recorded yet.</p> : null}
+          {!auditLogQuery.data?.length ? <p className="text-sm text-stone-500">Aún no se han registrado eventos de auditoría.</p> : null}
         </div>
       </section>
     </div>

@@ -184,7 +184,7 @@ export function TemplateDetailPage() {
                         changeNote: draftNote,
                       });
                       setBaselineContent(editor.getHTML());
-                      toast.success('Draft version saved');
+                      toast.success('Borrador de versión guardado');
                     }}
                     type="button"
                   >
@@ -217,7 +217,7 @@ export function TemplateDetailPage() {
 
               <div className="h-[760px]">
                 {previewEnabled && previewDataQuery.data ? (
-                  <Suspense fallback={<div className="p-8 text-sm text-stone-500">Loading preview...</div>}>
+                  <Suspense fallback={<div className="p-8 text-sm text-stone-500">Cargando vista previa...</div>}>
                     <LivePreview
                       data={previewDataQuery.data}
                       loading={previewDataQuery.isLoading}
@@ -260,7 +260,7 @@ export function TemplateDetailPage() {
               disabled={publishDisabled}
               onClick={async () => {
                 const confirmed = window.confirm(
-                  `Publish ${template.name}? This will make the current draft the stable version used for generation.`,
+                  `¿Publicar ${template.name}? Esto convertirá el borrador actual en la versión estable usada para la generación.`,
                 );
                 if (!confirmed) {
                   return;
@@ -279,7 +279,7 @@ export function TemplateDetailPage() {
                   templateId: template.id,
                   changeNote: publishNote,
                 });
-                toast.success('Template published');
+                toast.success('Plantilla publicada');
               }}
               type="button"
             >
@@ -311,9 +311,9 @@ export function TemplateDetailPage() {
                           await rollbackTemplate.mutateAsync({
                             templateId: template.id,
                             versionId: version.id,
-                            changeNote: `Rollback prepared from v${version.versionNumber}`,
+                            changeNote: `Revertido preparado desde v${version.versionNumber}`,
                           });
-                          toast.success(`Rollback draft created from v${version.versionNumber}`);
+                          toast.success(`Borrador de reversión creado desde v${version.versionNumber}`);
                         }}
                         type="button"
                       >
@@ -340,13 +340,13 @@ export function TemplateDetailPage() {
               className="mt-4 w-full rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 transition hover:bg-red-100 disabled:opacity-60"
               disabled={archiveTemplate.isPending || template.usedByDocuments > 0}
               onClick={async () => {
-                const confirmed = window.confirm(`Archive ${template.name}? Existing history is kept, but the template leaves active use.`);
+                const confirmed = window.confirm(`¿Archivar ${template.name}? El historial existente se conserva, pero la plantilla sale del uso activo.`);
                 if (!confirmed) {
                   return;
                 }
 
                 await archiveTemplate.mutateAsync({ templateId: template.id });
-                toast.success('Template archived');
+                toast.success('Plantilla archivada');
                 navigate('/templates');
               }}
               type="button"

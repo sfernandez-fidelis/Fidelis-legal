@@ -2,15 +2,15 @@ import type { ContactData, ContactMetadata, ContactRecordType, ContactType, Part
 
 export const contactTypeLabels: Record<ContactType, string> = {
   principal: 'Principal',
-  guarantor: 'Guarantor',
-  entity: 'Entity',
-  notary: 'Notary',
-  representative: 'Representative',
+  guarantor: 'Fiador',
+  entity: 'Entidad',
+  notary: 'Notario',
+  representative: 'Representante',
 };
 
 export const contactRecordTypeLabels: Record<ContactRecordType, string> = {
-  person: 'Person',
-  entity: 'Entity',
+  person: 'Persona',
+  entity: 'Entidad',
 };
 
 export function createEmptyParty(): PartyDetails {
@@ -47,7 +47,7 @@ export function mergeUnique(values: string[]) {
 }
 
 export function buildContactDisplayName(party: PartyDetails, metadata?: ContactMetadata) {
-  return metadata?.displayName || party.entityName || party.name || 'Untitled contact';
+  return metadata?.displayName || party.entityName || party.name || 'Contacto sin título';
 }
 
 export function buildDuplicateKey(party: PartyDetails, recordType: ContactRecordType) {

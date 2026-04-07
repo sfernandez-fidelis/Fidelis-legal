@@ -172,9 +172,9 @@ export function DocumentsPage() {
   if (documentsQuery.isError) {
     return (
       <PageErrorState
-        message="The documents module could not load the current matter list."
+        message="El módulo de documentos no pudo cargar la lista actual."
         onRetry={() => documentsQuery.refetch()}
-        title="Unable to load documents"
+        title="No se pudieron cargar los documentos"
       />
     );
   }

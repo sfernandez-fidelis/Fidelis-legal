@@ -87,18 +87,18 @@ export function ContactEditorForm({
       <section className="rounded-[28px] border border-stone-200 bg-white p-6 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-xl font-serif italic text-stone-900">Identity</h2>
-            <p className="mt-1 text-sm text-stone-500">Define what kind of reusable contact this is and how the team will find it.</p>
+            <h2 className="text-xl font-serif italic text-stone-900">Identidad</h2>
+            <p className="mt-1 text-sm text-stone-500">Define qué tipo de contacto reutilizable es este y cómo lo encontrará el equipo.</p>
           </div>
           {duplicateMatches.length ? (
             <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-              {duplicateMatches.length} possible duplicate{duplicateMatches.length > 1 ? 's' : ''} found in the library.
+              {duplicateMatches.length} posible{duplicateMatches.length > 1 ? 's' : ''} duplicado{duplicateMatches.length > 1 ? 's' : ''} encontrado{duplicateMatches.length > 1 ? 's' : ''} en la biblioteca.
             </div>
           ) : null}
         </div>
 
         <div className="mt-5 grid gap-4 md:grid-cols-2">
-          <Field label="Record type">
+          <Field label="Tipo de registro">
             <div className="flex flex-wrap gap-2">
               {allRecordTypes.map((type) => (
                 <button
@@ -116,17 +116,17 @@ export function ContactEditorForm({
             </div>
           </Field>
 
-          <Field label="Contact tags">
+          <Field label="Etiquetas del contacto">
             <input
               className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500"
               onChange={(event) => setTagsInput(event.target.value)}
-              placeholder="client, banking, repeat"
+              placeholder="cliente, banca, recurrente"
               value={tagsInput}
             />
           </Field>
 
           <div className="md:col-span-2">
-            <Field label="Contact roles">
+            <Field label="Roles del contacto">
               <div className="flex flex-wrap gap-2">
                 {allContactTypes.map((type) => (
                   <button
@@ -150,16 +150,16 @@ export function ContactEditorForm({
       </section>
 
       <section className="rounded-[28px] border border-stone-200 bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-serif italic text-stone-900">Profile</h2>
+        <h2 className="text-xl font-serif italic text-stone-900">Perfil</h2>
         <div className="mt-5 grid gap-4 md:grid-cols-2">
-          <Field label="Full name">
+          <Field label="Nombre completo">
             <input
               className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500"
               onChange={(event) => setParty({ ...party, name: event.target.value })}
               value={party.name}
             />
           </Field>
-          <Field label="Entity name">
+          <Field label="Nombre de la entidad">
             <input
               className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500"
               onChange={(event) => setParty({ ...party, entityName: event.target.value })}
@@ -181,35 +181,35 @@ export function ContactEditorForm({
               value={party.cui}
             />
           </Field>
-          <Field label="Profession">
+          <Field label="Profesión">
             <input
               className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500"
               onChange={(event) => setParty({ ...party, profession: event.target.value })}
               value={party.profession}
             />
           </Field>
-          <Field label="Domicile">
+          <Field label="Domicilio">
             <input
               className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500"
               onChange={(event) => setParty({ ...party, domicile: event.target.value })}
               value={party.domicile}
             />
           </Field>
-          <Field label="Representative role">
+          <Field label="Rol del representante">
             <input
               className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500"
               onChange={(event) => setParty({ ...party, role: event.target.value })}
               value={party.role ?? ''}
             />
           </Field>
-          <Field label="Notary">
+          <Field label="Notario">
             <input
               className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500"
               onChange={(event) => setParty({ ...party, notaryName: event.target.value })}
               value={party.notaryName ?? ''}
             />
           </Field>
-          <Field label="Act date">
+          <Field label="Fecha del acta">
             <input
               className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500"
               onChange={(event) => setParty({ ...party, actDate: event.target.value })}
@@ -217,7 +217,7 @@ export function ContactEditorForm({
               value={party.actDate ?? ''}
             />
           </Field>
-          <Field label="Registry">
+          <Field label="Registro">
             <input
               className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500"
               onChange={(event) => setParty({ ...party, regNumber: event.target.value })}
@@ -231,7 +231,7 @@ export function ContactEditorForm({
               value={party.regFolio ?? ''}
             />
           </Field>
-          <Field label="Book">
+          <Field label="Libro">
             <input
               className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500"
               onChange={(event) => setParty({ ...party, regBook: event.target.value })}
@@ -239,11 +239,11 @@ export function ContactEditorForm({
             />
           </Field>
           <div className="md:col-span-2">
-            <Field label="Notes">
+            <Field label="Notas">
               <textarea
                 className="min-h-28 w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500"
                 onChange={(event) => setNotes(event.target.value)}
-                placeholder="Anything the team should remember about this contact"
+                placeholder="Cualquier cosa que el equipo deba recordar sobre este contacto"
                 value={notes}
               />
             </Field>
@@ -257,7 +257,7 @@ export function ContactEditorForm({
           disabled={isSaving}
           type="submit"
         >
-          {!permissions.canEditContent ? 'Read only' : isSaving ? 'Saving...' : submitLabel}
+          {!permissions.canEditContent ? 'Solo lectura' : isSaving ? 'Guardando...' : submitLabel}
         </button>
       </div>
     </form>
