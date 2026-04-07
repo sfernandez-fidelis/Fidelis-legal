@@ -43,9 +43,9 @@ export function TemplatesPage() {
   if (templatesQuery.isError) {
     return (
       <PageErrorState
-        message="No fue posible cargar el catalogo de plantillas."
+        message="No fue posible cargar el catálogo de plantillas."
         onRetry={() => templatesQuery.refetch()}
-        title="No se pudo abrir la gestion de plantillas"
+        title="No se pudo abrir la gestión de plantillas"
       />
     );
   }
@@ -58,28 +58,28 @@ export function TemplatesPage() {
     <div className="mx-auto max-w-7xl space-y-6">
       <header className="flex flex-col gap-4 rounded-[32px] border border-stone-200 bg-white p-6 shadow-sm lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-stone-400">Template management</p>
-          <h1 className="text-4xl font-serif italic text-stone-900">Deliberate template releases</h1>
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-stone-400">Gestión de plantillas</p>
+          <h1 className="text-4xl font-serif italic text-stone-900">Publicación de plantillas controlada</h1>
           <p className="max-w-3xl text-sm text-stone-500">
-            Draft safely, review live output, publish with notes, and keep a reliable history for rollback.
+            Redacta de forma segura, revisa la salida en vivo, publica con notas y mantén un historial confiable para poder revertir los cambios.
           </p>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
           <FilterSelect
-            label="Contract type"
+            label="Tipo de contrato"
             onChange={(value) => setSelectedType((value as ContractType | 'all') ?? 'all')}
             options={[
-              { label: 'All contract types', value: 'all' },
+              { label: 'Todos los tipos', value: 'all' },
               ...Object.values(ContractType).map((type) => ({ label: getTemplateTypeLabel(type), value: type })),
             ]}
             value={selectedType}
           />
           <FilterSelect
-            label="State"
+            label="Estado"
             onChange={(value) => setSelectedState((value as (typeof stateFilters)[number]) ?? 'all')}
             options={stateFilters.map((state) => ({
-              label: state === 'all' ? 'All states' : getTemplateStateLabel(state),
+              label: state === 'all' ? 'Todos los estados' : getTemplateStateLabel(state),
               value: state,
             }))}
             value={selectedState}
@@ -88,16 +88,16 @@ export function TemplatesPage() {
       </header>
 
       {!permissions.canEditContent ? (
-        <PermissionNotice message="Viewer access is read-only. Template drafting and publishing are hidden for this role." />
+        <PermissionNotice message="El acceso tipo visor es solo de lectura. La redacción y publicación de plantillas están ocultas para este rol." />
       ) : null}
 
       {missingTypes.length && permissions.canEditContent ? (
         <section className="rounded-[28px] border border-dashed border-stone-300 bg-stone-50 p-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h2 className="text-lg font-medium text-stone-900">Create a managed template</h2>
+              <h2 className="text-lg font-medium text-stone-900">Crear una plantilla administrada</h2>
               <p className="mt-1 text-sm text-stone-500">
-                Start from the default contract language and move it into the versioned workflow.
+                Comienza desde el idioma del contrato predeterminado y trasládalo al flujo de trabajo con control de versiones.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -108,7 +108,7 @@ export function TemplatesPage() {
                   key={type}
                   onClick={async () => {
                     const templateId = await createTemplate.mutateAsync(type);
-                    toast.success('Template draft created');
+                    toast.success('Borrador de plantilla creado');
                     navigate(`/templates/${templateId}`);
                   }}
                   type="button"
@@ -148,39 +148,39 @@ export function TemplatesPage() {
                 <div>
                   <h2 className="text-2xl font-medium text-stone-900">{template.name}</h2>
                   <p className="mt-1 text-sm text-stone-500">
-                    {template.description || 'Version-controlled legal language with publish protection.'}
+                    {template.description || 'Lenguaje legal bajo control de versiones con protección de publicación.'}
                   </p>
                 </div>
               </div>
 
               <Link className="rounded-2xl border border-stone-200 px-4 py-3 text-sm font-medium text-stone-700 transition hover:bg-stone-50" to={`/templates/${template.id}`}>
-                {permissions.canEditContent ? 'Open' : 'View'}
+                {permissions.canEditContent ? 'Abrir' : 'Ver'}
               </Link>
             </div>
 
             <div className="mt-5 grid gap-3 sm:grid-cols-3">
-              <StatCard label="Latest version" value={`v${template.latestVersionNumber}`} />
+              <StatCard label="Última versión" value={`v${template.latestVersionNumber}`} />
               <StatCard
-                label="Published"
+                label="Publicada"
                 value={
                   template.publishedVersionId
                     ? template.draftVersionId === template.publishedVersionId
                       ? `v${template.latestVersionNumber}`
-                      : 'Active'
-                    : 'None'
+                      : 'Activa'
+                    : 'Ninguna'
                 }
               />
-              <StatCard label="Used by docs" value={String(template.usedByDocuments)} />
+              <StatCard label="Usada en docs" value={String(template.usedByDocuments)} />
             </div>
 
             <div className="mt-5 flex flex-wrap gap-3 text-sm text-stone-500">
               <span className="inline-flex items-center gap-2">
                 <GitBranch size={16} />
-                {template.hasUnpublishedChanges ? 'Unpublished draft waiting review' : 'Published state is current'}
+                {template.hasUnpublishedChanges ? 'Borrador no publicado pendiente de revisión' : 'El estado publicado es el actual'}
               </span>
               <span className="inline-flex items-center gap-2">
                 <Layers3 size={16} />
-                Updated {new Date(template.updatedAt).toLocaleString()}
+                Actualizado {new Date(template.updatedAt).toLocaleString()}
               </span>
             </div>
           </article>
@@ -189,7 +189,7 @@ export function TemplatesPage() {
 
       {!filteredTemplates.length ? (
         <div className="rounded-[28px] border border-dashed border-stone-300 bg-white p-10 text-center text-sm text-stone-500">
-          No templates match the current filters.
+          Ninguna plantilla coincide con los filtros actuales.
         </div>
       ) : null}
     </div>

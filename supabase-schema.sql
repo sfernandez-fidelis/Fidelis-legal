@@ -80,7 +80,9 @@ create table if not exists public.organization_invitations (
 create or replace function app.current_organization_ids()
 returns setof uuid
 language sql
+security definer
 stable
+set search_path = public
 as $$
   select organization_id
   from public.organization_members
@@ -91,7 +93,9 @@ $$;
 create or replace function app.is_org_member(target_organization_id uuid)
 returns boolean
 language sql
+security definer
 stable
+set search_path = public
 as $$
   select exists (
     select 1
@@ -105,7 +109,9 @@ $$;
 create or replace function app.has_org_role(target_organization_id uuid, minimum_role text)
 returns boolean
 language sql
+security definer
 stable
+set search_path = public
 as $$
   with membership as (
     select role
@@ -394,7 +400,7 @@ begin
     new.organization_id,
     next_version,
     new.payload,
-    template_content,
+    null,
     new.status,
     nullif(new.metadata ->> 'snapshot_reason', ''),
     coalesce(new.updated_by, new.created_by),

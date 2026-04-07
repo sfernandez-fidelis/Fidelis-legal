@@ -91,16 +91,16 @@ export function ContactsPage() {
     <div className="mx-auto max-w-7xl space-y-8">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-stone-400">Smart library</p>
-          <h1 className="mt-2 text-4xl font-serif italic text-stone-900">Contacts</h1>
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-stone-400">Biblioteca inteligente</p>
+          <h1 className="mt-2 text-4xl font-serif italic text-stone-900">Contactos</h1>
           <p className="mt-2 max-w-2xl text-stone-500">
-            Reusable legal parties, entities, notaries, and representatives that power autofill across document drafting.
+            Partes legales, entidades, notarios y representantes reutilizables que agilizan la redacción de documentos.
           </p>
         </div>
         <Link className="rounded-2xl bg-stone-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-black" to="/contacts/new">
           <span className="inline-flex items-center gap-2">
             <Plus size={16} />
-            New contact
+            Nuevo contacto
           </span>
         </Link>
       </header>
@@ -112,13 +112,13 @@ export function ContactsPage() {
             <input
               className="w-full rounded-2xl border border-stone-200 bg-stone-50 py-3 pl-11 pr-4 text-sm outline-none focus:ring-2 focus:ring-brand-500"
               onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="Search by name, company, DPI, tag, or role..."
+              placeholder="Buscar por nombre, empresa, DPI, etiqueta o rol..."
               type="search"
               value={searchInput}
             />
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
-            <FilterChip active={!selectedType} label="All types" onClick={() => updateParam('type')} />
+            <FilterChip active={!selectedType} label="Todos los tipos" onClick={() => updateParam('type')} />
             {typeOptions.map((type) => (
               <FilterChip
                 active={selectedType === type}
@@ -129,26 +129,26 @@ export function ContactsPage() {
             ))}
             <FilterChip
               active={duplicatesOnly}
-              label="Duplicates"
+              label="Duplicados"
               onClick={() => updateParam('dupes', duplicatesOnly ? undefined : '1')}
             />
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
-            <FilterChip active={sort === 'recent'} label="Most recent" onClick={() => updateParam('sort', 'recent')} />
-            <FilterChip active={sort === 'frequent'} label="Most used" onClick={() => updateParam('sort', 'frequent')} />
+            <FilterChip active={sort === 'recent'} label="Más recientes" onClick={() => updateParam('sort', 'recent')} />
+            <FilterChip active={sort === 'frequent'} label="Más usados" onClick={() => updateParam('sort', 'frequent')} />
             <FilterChip active={sort === 'name'} label="A-Z" onClick={() => updateParam('sort', 'name')} />
           </div>
         </div>
 
         <SuggestionCard
           items={recentContactsQuery.data ?? []}
-          subtitle="Recent contacts"
-          title="Ready to reuse"
+          subtitle="Contactos recientes"
+          title="Listos para usar"
         />
         <SuggestionCard
           items={frequentContactsQuery.data ?? []}
-          subtitle="Most used"
-          title="Frequent entities"
+          subtitle="Más usados"
+          title="Entidades frecuentes"
         />
       </div>
 
@@ -156,9 +156,9 @@ export function ContactsPage() {
         <section className="rounded-[28px] border border-amber-200 bg-amber-50 p-6 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="text-lg font-medium text-amber-950">Duplicate watch</h2>
+              <h2 className="text-lg font-medium text-amber-950">Control de duplicados</h2>
               <p className="mt-1 text-sm text-amber-800">
-                Merge repeated records to keep search results clean and improve autofill quality.
+                Combina registros repetidos para mantener limpios los resultados y mejorar el autocompletado.
               </p>
             </div>
           </div>
@@ -180,14 +180,14 @@ export function ContactsPage() {
                         mergeContacts.mutate(
                           { primaryId: primary.id, duplicateIds: duplicates.map((item) => item.id) },
                           {
-                            onSuccess: () => toast.success('Duplicate contacts merged'),
-                            onError: () => toast.error('Unable to merge duplicate contacts'),
+                            onSuccess: () => toast.success('Duplicados combinados'),
+                            onError: () => toast.error('No se pudo combinar'),
                           },
                         )
                       }
                       type="button"
                     >
-                      Merge duplicates
+                      Combinar duplicados
                     </button>
                   </div>
                 </div>
@@ -205,10 +205,10 @@ export function ContactsPage() {
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-stone-200 bg-stone-50">
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.3em] text-stone-400">Contact</th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.3em] text-stone-400">Types</th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.3em] text-stone-400">Usage</th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.3em] text-stone-400">Actions</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.3em] text-stone-400">Contacto</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.3em] text-stone-400">Tipos</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.3em] text-stone-400">Uso</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.3em] text-stone-400">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
@@ -217,7 +217,7 @@ export function ContactsPage() {
                     <td className="px-6 py-4">
                       <p className="font-medium text-stone-900">{contact.displayName}</p>
                       <p className="mt-1 text-sm text-stone-500">
-                        {[contact.party.entityName, contact.party.idNumber, contact.tags.slice(0, 2).join(', ')].filter(Boolean).join(' • ') || 'Reusable legal contact'}
+                        {[contact.party.entityName, contact.party.idNumber, contact.tags.slice(0, 2).join(', ')].filter(Boolean).join(' • ') || 'Contacto legal reutilizable'}
                       </p>
                     </td>
                     <td className="px-6 py-4">
@@ -230,8 +230,8 @@ export function ContactsPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-stone-500">
-                      <p>{contact.metadata.useCount ?? 0} uses</p>
-                      <p className="mt-1">{contact.metadata.lastUsedAt ? new Date(contact.metadata.lastUsedAt).toLocaleDateString() : 'Not used yet'}</p>
+                      <p>{contact.metadata.useCount ?? 0} usos</p>
+                      <p className="mt-1">{contact.metadata.lastUsedAt ? new Date(contact.metadata.lastUsedAt).toLocaleDateString() : 'Aún no se ha usado'}</p>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-wrap gap-2">
@@ -239,21 +239,21 @@ export function ContactsPage() {
                           className="rounded-xl border border-stone-200 px-3 py-2 text-sm text-stone-600 transition hover:bg-stone-100"
                           to={`/contacts/${contact.id}/edit`}
                         >
-                          Edit
+                          Editar
                         </Link>
                         <button
                           className="rounded-xl border border-stone-200 px-3 py-2 text-sm text-stone-600 transition hover:bg-stone-100"
                           onClick={() =>
                             deleteContact.mutate(contact.id, {
-                              onSuccess: () => toast.success('Contact archived'),
-                              onError: () => toast.error('Unable to archive contact'),
+                              onSuccess: () => toast.success('Contacto archivado'),
+                              onError: () => toast.error('No se pudo archivar'),
                             })
                           }
                           type="button"
                         >
                           <span className="inline-flex items-center gap-2">
                             <Trash2 size={14} />
-                            Archive
+                            Archivar
                           </span>
                         </button>
                       </div>
@@ -271,10 +271,10 @@ export function ContactsPage() {
               onClick={() => updateParam('page', String(page - 1))}
               type="button"
             >
-              Previous
+              Anterior
             </button>
             <p className="text-sm text-stone-500">
-              Page {page} of {totalPages}
+              Página {page} de {totalPages}
             </p>
             <button
               className="rounded-lg px-4 py-2 text-sm text-stone-600 transition hover:bg-stone-100 disabled:opacity-50"
@@ -282,14 +282,14 @@ export function ContactsPage() {
               onClick={() => updateParam('page', String(page + 1))}
               type="button"
             >
-              Next
+              Siguiente
             </button>
           </div>
         </>
       ) : (
         <EmptyState
-          description="Contacts appear here as your team saves matters or adds reusable legal parties manually."
-          title="No contacts yet"
+          description="Los contactos aparecerán aquí a medida que se guarden documentos."
+          title="Aún no hay contactos"
         />
       )}
     </div>
@@ -339,7 +339,7 @@ function SuggestionCard({
             </Link>
           ))
         ) : (
-          <p className="text-sm text-stone-500">Suggestions will appear here after a few saved documents.</p>
+          <p className="text-sm text-stone-500">Las sugerencias aparecerán aquí luego de algunos documentos guardados.</p>
         )}
       </div>
     </div>

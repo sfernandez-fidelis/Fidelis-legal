@@ -12,21 +12,21 @@ import { getDocumentDisplayName, getDocumentTypeLabel } from '../components/docu
 const documentOptions = [
   {
     type: ContractType.COUNTER_GUARANTEE_PRIVATE,
-    title: 'ContragarantÃ­a',
+    title: 'Contragarantía',
     subtitle: 'Documento Privado',
-    description: 'Formato estÃ¡ndar para contragarantÃ­as con legalizaciÃ³n de firmas.',
+    description: 'Formato estándar para contragarantías con legalización de firmas.',
   },
   {
     type: ContractType.COUNTER_GUARANTEE_PUBLIC,
-    title: 'ContragarantÃ­a',
-    subtitle: 'Escritura PÃºblica',
-    description: 'Protocolo para contragarantÃ­as elevadas a escritura pÃºblica.',
+    title: 'Contragarantía',
+    subtitle: 'Escritura Pública',
+    description: 'Protocolo para contragarantías elevadas a escritura pública.',
   },
   {
     type: ContractType.MORTGAGE_GUARANTEE,
-    title: 'GarantÃ­a Hipotecaria',
-    subtitle: 'Escritura PÃºblica',
-    description: 'Protocolo para constituciÃ³n de hipotecas como garantÃ­a.',
+    title: 'Garantía Hipotecaria',
+    subtitle: 'Escritura Pública',
+    description: 'Protocolo para constitución de hipotecas como garantía.',
   },
 ];
 
@@ -60,8 +60,8 @@ export function DashboardPage() {
         <div className="space-y-2">
           <h1 className="text-4xl font-serif italic text-gray-900">Bienvenido, {userName.split(' ')[0]}</h1>
           <p className="text-gray-500">
-            Â¿QuÃ© documento legal desea generar hoy?
-            {session ? ` EstÃ¡ trabajando en ${session.activeOrganization.name}.` : ''}
+            ¿Qué documento legal desea generar hoy?
+            {session ? ` Está trabajando en ${session.activeOrganization.name}.` : ''}
           </p>
         </div>
         <p className="text-xs font-bold uppercase tracking-[0.3em] text-gray-400">
@@ -127,7 +127,7 @@ export function DashboardPage() {
               {!documentsQuery.data?.items.length ? (
                 <tr>
                   <td className="px-6 py-12 text-center text-sm italic text-gray-400" colSpan={3}>
-                    No hay documentos generados aÃºn.
+                    No hay documentos generados aún.
                   </td>
                 </tr>
               ) : null}

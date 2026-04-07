@@ -11,8 +11,8 @@ export default function App() {
       <Sentry.ErrorBoundary
         fallback={
           <PageErrorState
-            title="La aplicacion encontro un error inesperado"
-            message="Se registro el incidente. Recargue la pantalla para continuar."
+            title="La aplicación encontró un error inesperado"
+            message="Se registró el incidente. Recargue la pantalla para continuar."
           />
         }
         onError={(error) => captureAppError(error, { area: 'app-root' })}

@@ -17,13 +17,13 @@ export function AppShell() {
     'Usuario';
   const userAvatar = user?.user_metadata?.avatar_url || '';
   const navigationItems = [
-    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, visible: true },
+    { to: '/dashboard', label: 'Inicio', icon: LayoutDashboard, visible: true },
     { to: '/documents', label: 'Documentos', icon: FileText, visible: true },
     { to: '/templates', label: 'Plantillas', icon: FileText, visible: true },
     { to: '/contacts', label: 'Contactos', icon: Users, visible: true },
     { to: '/team', label: 'Equipo', icon: Shield, visible: permissions.canManageOrganization },
-    { to: '/audit-log', label: 'Auditoria', icon: ClipboardList, visible: permissions.canViewAuditLog },
-    { to: '/settings', label: 'Configuracion', icon: Settings, visible: permissions.canManageOrganization },
+    { to: '/audit-log', label: 'Auditoría', icon: ClipboardList, visible: permissions.canViewAuditLog },
+    { to: '/settings', label: 'Configuración', icon: Settings, visible: permissions.canManageOrganization },
   ].filter((item) => item.visible);
 
   return (
@@ -78,7 +78,7 @@ export function AppShell() {
               onClick={() => logout.mutate()}
             >
               <LogOut size={18} />
-              Cerrar sesion
+              Cerrar sesión
             </button>
           </div>
         </aside>

@@ -6,7 +6,7 @@ import { DocumentEditor, type SaveIndicatorState } from '../components/DocumentE
 import { useContactsQuery } from '../../contacts/hooks/useContactsQuery';
 import { useSaveContact } from '../../contacts/hooks/useSaveContact';
 import { useTemplateContent } from '../../templates/hooks/useTemplatesQuery';
-import { useGenerateFileArtifact } from '../hooks/useGeneratedFiles';
+import { documentGeneratorService } from '../api/documentGeneratorService';
 import { ContractType, type CounterGuaranteeData } from '../../../types';
 import { PageErrorState } from '../../../shared/components/PageErrorState';
 import { useAutosaveDocument } from '../hooks/useAutosaveDocument';
@@ -34,7 +34,6 @@ export function DocumentCreatePage() {
   const saveContact = useSaveContact();
   const templateQuery = useTemplateContent(selectedType);
   const autosave = useAutosaveDocument(Boolean(draft), draft);
-  const generateFileMutation = useGenerateFileArtifact();
 
   useEffect(() => {
     if (!session?.activeOrganization.id) {
@@ -59,7 +58,7 @@ export function DocumentCreatePage() {
     if (id) {
       setCreatedId(id);
       setDraft((current) => (current ? { ...current, id } : current));
-      toast.success('Draft saved');
+      toast.success('Borrador guardado');
     }
   };
 
@@ -72,26 +71,26 @@ export function DocumentCreatePage() {
 
     const savedDocument = { ...currentDocument, id };
     try {
-      await generateFileMutation.mutateAsync({
+      await documentGeneratorService.generateAndDownload({
         document: savedDocument,
         templateContent: templateQuery.content,
         kind: format === 'pdf' ? 'pdf' : 'docx',
       });
-      toast.success(`${format.toUpperCase()} generated`);
+      toast.success(`${format.toUpperCase()} descargado exitosamente`);
       if (id) {
         navigate(`/documents/${id}`);
       }
     } catch {
-      toast.error(`Could not generate ${format.toUpperCase()}`);
+      toast.error(`No se pudo generar el ${format.toUpperCase()}`);
     }
   };
 
   if (contactsQuery.isError) {
     return (
       <PageErrorState
-        message="Contacts are required before a new document can be drafted."
+        message="Se requieren contactos registrados antes de poder redactar un documento."
         onRetry={() => contactsQuery.refetch()}
-        title="Unable to prepare creation flow"
+        title="No se puede iniciar el flujo de creación"
       />
     );
   }
@@ -102,14 +101,14 @@ export function DocumentCreatePage() {
     <div className="mx-auto max-w-7xl space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-stone-400">Guided creation</p>
-          <h1 className="mt-2 text-4xl font-serif italic text-stone-900">Start a new legal document</h1>
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-stone-400">Creación guiada</p>
+          <h1 className="mt-2 text-4xl font-serif italic text-stone-900">Iniciar nuevo documento</h1>
           <p className="mt-2 max-w-2xl text-stone-500">
-            Pick the right contract type, draft with autosave, and move into generation when the matter is ready.
+            Escoge el tipo de contrato, redacta con autoguardado y genera el archivo cuando estés listo.
           </p>
         </div>
         <Link className="text-sm font-medium text-brand-700 hover:underline" to="/documents">
-          Back to documents
+          Volver a documentos
         </Link>
       </div>
 
@@ -126,10 +125,10 @@ export function DocumentCreatePage() {
             <p className="text-xs uppercase tracking-[0.25em]">{type.replaceAll('_', ' ')}</p>
             <p className="mt-3 text-lg font-medium">
               {type === ContractType.COUNTER_GUARANTEE_PRIVATE
-                ? 'Private counter-guarantee'
+                ? 'Contragarantía privada'
                 : type === ContractType.COUNTER_GUARANTEE_PUBLIC
-                  ? 'Public counter-guarantee'
-                  : 'Mortgage guarantee'}
+                  ? 'Contragarantía pública'
+                  : 'Garantía hipotecaria'}
             </p>
           </button>
         ))}
@@ -149,12 +148,12 @@ export function DocumentCreatePage() {
               tags: ['saved-from-document'],
             },
           });
-          toast.success('Contact saved to library');
+          toast.success('Contacto guardado en la biblioteca');
           await contactsQuery.refetch();
         }}
         onMarkReady={async (document) => {
           await handleSaveNow({ ...document, status: 'ready' });
-          toast.success('Document marked ready');
+          toast.success('Documento marcado como preparado');
         }}
         onRegenerate={handleGenerate}
         onSaveNow={handleSaveNow}

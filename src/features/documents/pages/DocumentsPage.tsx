@@ -15,44 +15,44 @@ const DEFAULT_PAGE_SIZE = 12;
 const SAVED_VIEWS_KEY = 'legal.documents.savedViews';
 
 const statusOptions = [
-  { label: 'All statuses', value: 'all' },
-  { label: 'Draft', value: 'draft' },
-  { label: 'Ready', value: 'ready' },
-  { label: 'Generated', value: 'generated' },
-  { label: 'Archived', value: 'archived' },
+  { label: 'Todos los estados', value: 'all' },
+  { label: 'Borrador', value: 'draft' },
+  { label: 'Listo', value: 'ready' },
+  { label: 'Generado', value: 'generated' },
+  { label: 'Archivado', value: 'archived' },
 ] as const;
 
 const contractTypeOptions = [
-  { label: 'All types', value: 'all' },
-  { label: 'Private counter-guarantee', value: ContractType.COUNTER_GUARANTEE_PRIVATE },
-  { label: 'Public counter-guarantee', value: ContractType.COUNTER_GUARANTEE_PUBLIC },
-  { label: 'Mortgage guarantee', value: ContractType.MORTGAGE_GUARANTEE },
+  { label: 'Todos los tipos', value: 'all' },
+  { label: 'Contragarantía privada', value: ContractType.COUNTER_GUARANTEE_PRIVATE },
+  { label: 'Contragarantía pública', value: ContractType.COUNTER_GUARANTEE_PUBLIC },
+  { label: 'Garantía hipotecaria', value: ContractType.MORTGAGE_GUARANTEE },
 ] as const;
 
 const sortOptions: Array<{ label: string; value: DocumentSort }> = [
-  { label: 'Recently updated', value: 'updated_at:desc' },
-  { label: 'Recently created', value: 'created_at:desc' },
-  { label: 'Oldest first', value: 'created_at:asc' },
-  { label: 'Title A-Z', value: 'title:asc' },
-  { label: 'Title Z-A', value: 'title:desc' },
+  { label: 'Actualizados recientemente', value: 'updated_at:desc' },
+  { label: 'Creados recientemente', value: 'created_at:desc' },
+  { label: 'Más antiguos primero', value: 'created_at:asc' },
+  { label: 'Título A-Z', value: 'title:asc' },
+  { label: 'Título Z-A', value: 'title:desc' },
 ];
 
 const defaultViews: SavedDocumentView[] = [
   {
     id: 'active-drafts',
-    name: 'Draft queue',
+    name: 'Borradores activos',
     filters: { status: 'draft', sort: 'updated_at:desc' },
     createdAt: new Date().toISOString(),
   },
   {
     id: 'ready-to-generate',
-    name: 'Ready to generate',
+    name: 'Listos para generar',
     filters: { status: 'ready', sort: 'updated_at:desc' },
     createdAt: new Date().toISOString(),
   },
   {
     id: 'generated-library',
-    name: 'Generated library',
+    name: 'Biblioteca de generados',
     filters: { status: 'generated', sort: 'updated_at:desc' },
     createdAt: new Date().toISOString(),
   },
@@ -128,7 +128,7 @@ export function DocumentsPage() {
   };
 
   const saveCurrentView = () => {
-    const name = window.prompt('Name this view');
+    const name = window.prompt('Nombra esta vista');
     if (!name) {
       return;
     }
@@ -185,10 +185,10 @@ export function DocumentsPage() {
     <div className="mx-auto max-w-7xl space-y-8">
       <header className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-stone-400">Documents module</p>
-          <h1 className="mt-2 text-4xl font-serif italic text-stone-900">Document workflow</h1>
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-stone-400">Módulo de documentos</p>
+          <h1 className="mt-2 text-4xl font-serif italic text-stone-900">Flujo de trabajo</h1>
           <p className="mt-2 max-w-2xl text-stone-500">
-            Search, filter, revisit, and manage the full legal drafting lifecycle from one dependable table.
+            Busca, filtra, revisa y gestiona el ciclo de vida completo de la redacción legal desde una tabla centralizada.
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -199,12 +199,12 @@ export function DocumentsPage() {
           >
             <span className="inline-flex items-center gap-2">
               <Star size={16} />
-              Save current view
+              Guardar vista actual
             </span>
           </button>
           {permissions.canEditContent ? (
             <Link className="rounded-2xl bg-stone-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-black" to="/documents/new">
-              New document
+              Nuevo documento
             </Link>
           ) : null}
         </div>
@@ -217,7 +217,7 @@ export function DocumentsPage() {
             <input
               className="w-full rounded-2xl border border-stone-200 bg-stone-50 py-3 pl-11 pr-4 text-sm outline-none focus:ring-2 focus:ring-brand-500"
               onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="Search by title, principal, beneficiary, or policy"
+              placeholder="Buscar por título, fiado, beneficiario o póliza"
               value={searchInput}
             />
           </label>
@@ -275,16 +275,16 @@ export function DocumentsPage() {
 
       <section className="overflow-hidden rounded-[28px] border border-stone-200 bg-white shadow-sm">
         <div className="flex items-center justify-between border-b border-stone-200 px-5 py-4">
-          <p className="text-sm text-stone-500">{documentsQuery.data?.total ?? 0} documents</p>
-          {documentsQuery.isFetching ? <p className="text-xs text-stone-400">Refreshing results...</p> : null}
+          <p className="text-sm text-stone-500">{documentsQuery.data?.total ?? 0} documentos</p>
+          {documentsQuery.isFetching ? <p className="text-xs text-stone-400">Actualizando resultados...</p> : null}
         </div>
 
         {!documentsQuery.isLoading && !(documentsQuery.data?.items.length ?? 0) ? (
           <div className="p-6">
             <EmptyState
-              action={permissions.canEditContent ? <Link className="rounded-xl bg-stone-900 px-4 py-2 text-sm font-medium text-white" to="/documents/new">Create document</Link> : undefined}
-              description="Adjust filters or start a new document to build your workflow pipeline."
-              title="No documents match this view"
+              action={permissions.canEditContent ? <Link className="rounded-xl bg-stone-900 px-4 py-2 text-sm font-medium text-white" to="/documents/new">Crear documento</Link> : undefined}
+              description="Ajusta los filtros o inicia un documento nuevo para construir tu flujo de trabajo."
+              title="Ningún documento coincide con esta vista"
             />
           </div>
         ) : (
@@ -292,12 +292,12 @@ export function DocumentsPage() {
             <table className="min-w-full divide-y divide-stone-200">
               <thead className="bg-stone-50">
                 <tr className="text-left text-xs uppercase tracking-[0.2em] text-stone-500">
-                  <th className="px-5 py-4">Document</th>
-                  <th className="px-5 py-4">Status</th>
-                  <th className="px-5 py-4">Type</th>
-                  <th className="px-5 py-4">Updated</th>
-                  <th className="px-5 py-4">Version</th>
-                  <th className="px-5 py-4">Actions</th>
+                  <th className="px-5 py-4">Documento</th>
+                  <th className="px-5 py-4">Estado</th>
+                  <th className="px-5 py-4">Tipo</th>
+                  <th className="px-5 py-4">Actualizado</th>
+                  <th className="px-5 py-4">Versión</th>
+                  <th className="px-5 py-4">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
@@ -306,10 +306,10 @@ export function DocumentsPage() {
                     <td className="px-5 py-4">
                       <div>
                         <Link className="text-sm font-semibold text-stone-900 transition hover:text-brand-700" to={`/documents/${document.id}`}>
-                          {document.title || document.principal.entityName || document.principal.name || 'Untitled document'}
+                          {document.title || document.principal.entityName || document.principal.name || 'Documento sin título'}
                         </Link>
                         <p className="mt-1 text-sm text-stone-500">{document.principal.entityName || document.principal.name}</p>
-                        <p className="mt-2 text-xs text-stone-400">{document.beneficiaryName || 'No beneficiary captured yet'}</p>
+                        <p className="mt-2 text-xs text-stone-400">{document.beneficiaryName || 'No se ha capturado beneficiario aún'}</p>
                       </div>
                     </td>
                     <td className="px-5 py-4">
@@ -317,7 +317,7 @@ export function DocumentsPage() {
                     </td>
                     <td className="px-5 py-4 text-sm text-stone-600">{getDocumentTypeLabel(document.type)}</td>
                     <td className="px-5 py-4 text-sm text-stone-600">
-                      {document.updatedAt ? format(new Date(document.updatedAt), 'MMM d, yyyy HH:mm') : 'Just created'}
+                      {document.updatedAt ? format(new Date(document.updatedAt), 'MMM d, yyyy HH:mm') : 'Recién creado'}
                     </td>
                     <td className="px-5 py-4 text-sm text-stone-600">
                       v{document.metadata?.lifecycle?.currentVersion ?? document.metadata?.lifecycle?.versionCount ?? 1}
@@ -325,15 +325,15 @@ export function DocumentsPage() {
                     <td className="px-5 py-4">
                       <div className="flex flex-wrap gap-2">
                         <Link className="rounded-xl border border-stone-200 px-3 py-2 text-sm text-stone-600 transition hover:bg-stone-50" to={`/documents/${document.id}`}>
-                          View
+                          Ver
                         </Link>
                         {permissions.canEditContent ? (
                           <Link className="rounded-xl border border-stone-200 px-3 py-2 text-sm text-stone-600 transition hover:bg-stone-50" to={`/documents/${document.id}/edit`}>
-                            Edit
+                            Editar
                           </Link>
                         ) : null}
                         <Link className="rounded-xl border border-stone-200 px-3 py-2 text-sm text-stone-600 transition hover:bg-stone-50" to={`/documents/${document.id}/history`}>
-                          History
+                          Historial
                         </Link>
                       </div>
                     </td>
@@ -352,10 +352,10 @@ export function DocumentsPage() {
           onClick={() => setPage(page - 1)}
           type="button"
         >
-          Previous
+          Anterior
         </button>
         <p className="text-sm text-stone-500">
-          Page {page} of {totalPages}
+          Página {page} de {totalPages}
         </p>
         <button
           className="rounded-xl border border-stone-200 px-4 py-2 text-sm text-stone-600 transition hover:bg-white disabled:opacity-50"
@@ -363,7 +363,7 @@ export function DocumentsPage() {
           onClick={() => setPage(page + 1)}
           type="button"
         >
-          Next
+          Siguiente
         </button>
       </div>
     </div>

@@ -100,7 +100,7 @@ export function TemplateDetailPage() {
   }
 
   if (!template || !editor) {
-    return <div className="p-8 text-sm text-stone-500">Loading template workspace...</div>;
+    return <div className="p-8 text-sm text-stone-500">Cargando entorno de la plantilla...</div>;
   }
 
   const publishDisabled =
@@ -114,7 +114,7 @@ export function TemplateDetailPage() {
         <div className="space-y-3">
           <Link className="inline-flex items-center gap-2 text-sm font-medium text-brand-700 hover:underline" to="/templates">
             <ArrowLeft size={16} />
-            Back to templates
+            Volver a plantillas
           </Link>
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-stone-500">
@@ -135,20 +135,20 @@ export function TemplateDetailPage() {
           <div>
             <h1 className="text-4xl font-serif italic text-stone-900">{template.name}</h1>
             <p className="mt-2 max-w-3xl text-sm text-stone-500">
-              Published version stays stable until you explicitly release the draft. Every draft save creates a new version that can be rolled back.
+              La versión publicada permanece estable hasta publicar explícitamente el borrador. Cada guardado crea una versión a la que se puede revertir.
             </p>
           </div>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-3">
-          <Metric title="Used by documents" value={String(template.usedByDocuments)} />
-          <Metric title="Published version" value={template.publishedVersion ? `v${template.publishedVersion.versionNumber}` : 'None'} />
-          <Metric title="Draft head" value={template.draftVersion ? `v${template.draftVersion.versionNumber}` : 'None'} />
+          <Metric title="Usada en docs" value={String(template.usedByDocuments)} />
+          <Metric title="Versión publicada" value={template.publishedVersion ? `v${template.publishedVersion.versionNumber}` : 'Ninguna'} />
+          <Metric title="Borrador actual" value={template.draftVersion ? `v${template.draftVersion.versionNumber}` : 'Ninguno'} />
         </div>
       </header>
 
       {!permissions.canEditContent ? (
-        <PermissionNotice message="Viewer access can inspect published template history and preview output, but editing and publishing are disabled." />
+        <PermissionNotice message="El acceso como visor permite inspeccionar el historial y la vista previa, pero la edición y publicación están deshabilitadas." />
       ) : null}
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_420px]">
@@ -158,12 +158,12 @@ export function TemplateDetailPage() {
               {permissions.canEditContent ? <EditorToolbar editor={editor} /> : null}
               <div className="border-b border-stone-200 px-5 py-4">
                 <label className="block">
-                  <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.25em] text-stone-400">Draft save note</span>
+                  <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.25em] text-stone-400">Nota del borrador</span>
                   <input
                     className="w-full rounded-2xl border border-stone-200 px-4 py-3 text-sm text-stone-700 focus:border-stone-900 focus:outline-none"
                     disabled={!permissions.canEditContent}
                     onChange={(event) => setDraftNote(event.target.value)}
-                    placeholder="Describe what changed in this draft"
+                    placeholder="Describe los cambios en este borrador"
                     value={draftNote}
                   />
                 </label>
@@ -172,7 +172,7 @@ export function TemplateDetailPage() {
               {permissions.canEditContent ? (
                 <div className="flex flex-wrap items-center justify-between gap-3 border-t border-stone-200 px-5 py-4">
                   <p className="text-sm text-stone-500">
-                    {isDirty ? 'Local edits are ready to be captured as a new draft version.' : 'Editor matches the latest saved draft.'}
+                    {isDirty ? 'Los cambios están listos para guardarse como un nuevo borrador.' : 'El editor coincide con el último borrador guardado.'}
                   </p>
                   <button
                     className="rounded-2xl bg-stone-900 px-4 py-3 text-sm font-medium text-white transition hover:bg-black disabled:opacity-60"
@@ -190,7 +190,7 @@ export function TemplateDetailPage() {
                   >
                     <span className="inline-flex items-center gap-2">
                       <Save size={16} />
-                      Save draft version
+                      Guardar borrador
                     </span>
                   </button>
                 </div>
@@ -200,8 +200,8 @@ export function TemplateDetailPage() {
             <div className="overflow-hidden rounded-[28px] border border-stone-200 bg-white shadow-sm">
               <div className="flex items-center justify-between border-b border-stone-200 px-5 py-4">
                 <div>
-                  <h2 className="text-lg font-medium text-stone-900">Rendered preview</h2>
-                  <p className="text-sm text-stone-500">Sample data loads only when preview is requested.</p>
+                  <h2 className="text-lg font-medium text-stone-900">Vista previa</h2>
+                  <p className="text-sm text-stone-500">Los datos de prueba se cargan al solicitarlo.</p>
                 </div>
                 <button
                   className="rounded-2xl border border-stone-200 px-4 py-3 text-sm font-medium text-stone-700 transition hover:bg-stone-50"
@@ -210,7 +210,7 @@ export function TemplateDetailPage() {
                 >
                   <span className="inline-flex items-center gap-2">
                     <Eye size={16} />
-                    {previewEnabled ? 'Refresh sample view' : 'Load sample preview'}
+                    {previewEnabled ? 'Actualizar vista previa' : 'Cargar vista de prueba'}
                   </span>
                 </button>
               </div>
@@ -228,7 +228,7 @@ export function TemplateDetailPage() {
                 ) : (
                   <div className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center text-stone-500">
                     <Eye className="h-8 w-8 text-stone-300" />
-                    <p>Preview data is lazy-loaded so the editor opens quickly.</p>
+                    <p>La vista previa se carga de forma diferida para que el editor inicie rápido.</p>
                   </div>
                 )}
               </div>
@@ -241,17 +241,17 @@ export function TemplateDetailPage() {
           <section className="rounded-[28px] border border-stone-200 bg-white p-5 shadow-sm">
             <div className="flex items-center gap-2">
               <Send className="h-5 w-5 text-stone-700" />
-              <h2 className="text-lg font-medium text-stone-900">Publish flow</h2>
+            <h2 className="text-lg font-medium text-stone-900">Flujo de publicación</h2>
             </div>
             <p className="mt-2 text-sm text-stone-500">
-              Publishing moves the current draft into the stable release used by document generation.
+              La publicación convierte este borrador en la versión estable usada para generar documentos.
             </p>
             <label className="mt-4 block">
-              <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.25em] text-stone-400">Change note</span>
+              <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.25em] text-stone-400">Nota de cambios</span>
               <textarea
                 className="min-h-28 w-full rounded-2xl border border-stone-200 px-4 py-3 text-sm text-stone-700 focus:border-stone-900 focus:outline-none"
                 onChange={(event) => setPublishNote(event.target.value)}
-                placeholder="Summarize what reviewers should know about this release"
+                placeholder="Resume lo relevante para los revisores de esta versión"
                 value={publishNote}
               />
             </label>
@@ -283,7 +283,7 @@ export function TemplateDetailPage() {
               }}
               type="button"
             >
-              Publish current draft
+              Publicar borrador actual
             </button>
           </section>
           ) : null}
@@ -291,7 +291,7 @@ export function TemplateDetailPage() {
           <section className="rounded-[28px] border border-stone-200 bg-white p-5 shadow-sm">
             <div className="flex items-center gap-2">
               <History className="h-5 w-5 text-stone-700" />
-              <h2 className="text-lg font-medium text-stone-900">Version history</h2>
+              <h2 className="text-lg font-medium text-stone-900">Historial de versiones</h2>
             </div>
             <div className="mt-4 space-y-3">
               {template.versions.map((version) => (
@@ -300,7 +300,7 @@ export function TemplateDetailPage() {
                     <div>
                       <p className="text-sm font-medium text-stone-900">
                         v{version.versionNumber}
-                        {version.isPublished ? ' - published' : version.isDraft ? ' - draft head' : ''}
+                        {version.isPublished ? ' - publicada' : version.isDraft ? ' - borrador' : ''}
                       </p>
                       <p className="mt-1 text-xs text-stone-500">{new Date(version.createdAt).toLocaleString()}</p>
                     </div>
@@ -319,12 +319,12 @@ export function TemplateDetailPage() {
                       >
                         <span className="inline-flex items-center gap-2">
                           <Undo2 size={14} />
-                          Roll back
+                          Revertir
                         </span>
                       </button>
                     ) : null}
                   </div>
-                  <p className="mt-2 text-sm text-stone-600">{version.changeNote || 'No change note provided.'}</p>
+                  <p className="mt-2 text-sm text-stone-600">{version.changeNote || 'Sin notas de cambios.'}</p>
                 </div>
               ))}
             </div>
@@ -332,9 +332,9 @@ export function TemplateDetailPage() {
 
           {permissions.canManageOrganization ? (
           <section className="rounded-[28px] border border-stone-200 bg-white p-5 shadow-sm">
-            <h2 className="text-lg font-medium text-stone-900">Administrative actions</h2>
+            <h2 className="text-lg font-medium text-stone-900">Acciones administrativas</h2>
             <p className="mt-2 text-sm text-stone-500">
-              Archiving keeps history intact while removing the template from active workflows.
+              Archivar conserva el historial pero retira la plantilla de los flujos activos.
             </p>
             <button
               className="mt-4 w-full rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 transition hover:bg-red-100 disabled:opacity-60"
@@ -353,11 +353,11 @@ export function TemplateDetailPage() {
             >
               <span className="inline-flex items-center gap-2">
                 <Trash2 size={16} />
-                Archive template
+                Archivar plantilla
               </span>
             </button>
             {template.usedByDocuments > 0 ? (
-              <p className="mt-2 text-xs text-stone-500">Archiving is disabled while the template is linked to saved documents.</p>
+              <p className="mt-2 text-xs text-stone-500">El archivado está deshabilitado si está vinculada a documentos.</p>
             ) : null}
           </section>
           ) : null}
@@ -392,7 +392,7 @@ function EditorToolbar({ editor }: { editor: any }) {
           }
         }}
       >
-        <option value="">Insert variable</option>
+        <option value="">Insertar variable</option>
         {availableVariables.map(([value, label]) => (
           <option key={value} value={value}>
             {label}
@@ -400,7 +400,7 @@ function EditorToolbar({ editor }: { editor: any }) {
         ))}
       </select>
       <div className="text-xs uppercase tracking-[0.25em] text-stone-400">
-        Published version remains frozen until you release this draft.
+        La versión publicada permanece bloqueada hasta publicar este borrador.
       </div>
     </div>
   );

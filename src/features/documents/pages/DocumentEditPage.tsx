@@ -10,7 +10,7 @@ import { ContractType, type CounterGuaranteeData } from '../../../types';
 import { DocumentEditor } from '../components/DocumentEditor';
 import { useAutosaveDocument } from '../hooks/useAutosaveDocument';
 import { useDocumentQuery } from '../hooks/useDocumentQuery';
-import { useGenerateFileArtifact } from '../hooks/useGeneratedFiles';
+import { documentGeneratorService } from '../api/documentGeneratorService';
 import { useDuplicateDocument, useUpdateDocumentLifecycle } from '../hooks/useSaveDocument';
 import { useAppSession } from '../../auth/hooks/useSessionQuery';
 import { queryKeys } from '../../../lib/queryKeys';
@@ -28,7 +28,6 @@ export function DocumentEditPage() {
   const autosave = useAutosaveDocument(Boolean(documentQuery.data && draft), draft);
   const lifecycleMutation = useUpdateDocumentLifecycle();
   const duplicateMutation = useDuplicateDocument();
-  const generateFileMutation = useGenerateFileArtifact();
   const templateQuery = useTemplateContent(documentQuery.data?.type ?? ContractType.COUNTER_GUARANTEE_PRIVATE);
 
   const withPublishedTemplate = (document: CounterGuaranteeData): CounterGuaranteeData => ({
@@ -51,9 +50,9 @@ export function DocumentEditPage() {
   if (documentQuery.isError) {
     return (
       <PageErrorState
-        message="The edit flow could not load this document."
+        message="El flujo de edición no pudo cargar este documento."
         onRetry={() => documentQuery.refetch()}
-        title="Unable to open document editor"
+        title="No se puede abrir el editor"
       />
     );
   }
@@ -61,9 +60,9 @@ export function DocumentEditPage() {
   if (contactsQuery.isError) {
     return (
       <PageErrorState
-        message="Contacts are required to continue editing."
+        message="Se requieren contactos para continuar editando."
         onRetry={() => contactsQuery.refetch()}
-        title="Unable to load contacts"
+        title="No se pudieron cargar los contactos"
       />
     );
   }
@@ -75,14 +74,14 @@ export function DocumentEditPage() {
 
   const handleSaveNow = async (nextDocument: CounterGuaranteeData) => {
     await autosave.flush(withPublishedTemplate(nextDocument));
-    toast.success('Changes saved');
+    toast.success('Cambios guardados');
   };
 
   const handleGenerate = async (formatType: 'pdf' | 'word', nextDocument: CounterGuaranteeData) => {
     const preparedDocument = withPublishedTemplate(nextDocument);
     await autosave.flush(preparedDocument);
     try {
-      await generateFileMutation.mutateAsync({
+      await documentGeneratorService.generateAndDownload({
         document: preparedDocument,
         templateContent: templateQuery.content,
         kind: formatType === 'pdf' ? 'pdf' : 'docx',
@@ -97,9 +96,9 @@ export function DocumentEditPage() {
           label: formatType.toUpperCase(),
         },
       });
-      toast.success(`${formatType.toUpperCase()} generated`);
+      toast.success(`${formatType.toUpperCase()} descargado exitosamente`);
     } catch {
-      toast.error(`Could not generate ${formatType.toUpperCase()}`);
+      toast.error(`No se pudo generar el ${formatType.toUpperCase()}`);
     }
   };
 
@@ -107,14 +106,14 @@ export function DocumentEditPage() {
     <div className="mx-auto max-w-7xl space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-stone-400">Structured editing</p>
-          <h1 className="mt-2 text-4xl font-serif italic text-stone-900">Edit and autosave</h1>
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-stone-400">Edición estructurada</p>
+          <h1 className="mt-2 text-4xl font-serif italic text-stone-900">Editar y autoguardar</h1>
           <p className="mt-2 max-w-2xl text-stone-500">
-            This editor hydrates from the cached detail query, keeps save state visible, and records milestone updates.
+            El editor muestra el estado de guardado y registra actualizaciones de versión.
           </p>
         </div>
         <Link className="text-sm font-medium text-brand-700 hover:underline" to={`/documents/${document.id}`}>
-          Back to detail
+          Volver a detalles
         </Link>
       </div>
 
@@ -130,7 +129,7 @@ export function DocumentEditPage() {
             archived: true,
             snapshotReason: 'archived',
           });
-          toast.success('Document archived');
+          toast.success('Documento archivado');
           navigate(`/documents/${currentDocument.id}`);
         }}
         onChange={(nextDocument) => setDraft(withPublishedTemplate(nextDocument))}
@@ -143,12 +142,12 @@ export function DocumentEditPage() {
               tags: ['saved-from-document'],
             },
           });
-          toast.success('Contact saved to library');
+          toast.success('Contacto guardado en la biblioteca');
           await contactsQuery.refetch();
         }}
         onDuplicate={async (currentDocument) => {
           const duplicatedId = await duplicateMutation.mutateAsync(currentDocument);
-          toast.success('Duplicate created');
+          toast.success('Duplicado creado');
           navigate(`/documents/${duplicatedId}`);
         }}
         onMarkReady={async (currentDocument) => {
@@ -158,7 +157,7 @@ export function DocumentEditPage() {
             status: 'ready',
             snapshotReason: 'ready',
           });
-          toast.success('Document marked ready');
+          toast.success('Documento marcado como preparado');
         }}
         onRegenerate={handleGenerate}
         onRestore={async (currentDocument) => {
@@ -168,7 +167,7 @@ export function DocumentEditPage() {
             archived: false,
             snapshotReason: 'restored',
           });
-          toast.success('Document restored');
+          toast.success('Documento restaurado');
         }}
         onSaveNow={handleSaveNow}
         saveIndicator={autosave.autosaveState}

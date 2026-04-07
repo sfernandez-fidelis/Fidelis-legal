@@ -42,7 +42,7 @@ export const router = createBrowserRouter([
     path: '/login',
     element: loginPage,
     errorElement: <RouteErrorBoundary />,
-    handle: { breadcrumb: 'Login' },
+    handle: { breadcrumb: 'Iniciar sesión' },
   },
   {
     path: '/',
@@ -56,17 +56,17 @@ export const router = createBrowserRouter([
           {
             path: 'dashboard',
             element: dashboardPage,
-            handle: { breadcrumb: 'Dashboard' },
+            handle: { breadcrumb: 'Inicio' },
           },
           {
             path: 'documents',
             handle: { breadcrumb: 'Documentos' },
             children: [
               { index: true, element: documentsPage },
-              { path: 'new', element: documentCreatePage, handle: { breadcrumb: 'Create' } },
-              { path: ':id', element: documentDetailPage, handle: { breadcrumb: 'Detail' } },
-              { path: ':id/edit', element: documentEditPage, handle: { breadcrumb: 'Edit' } },
-              { path: ':id/history', element: documentHistoryPage, handle: { breadcrumb: 'History' } },
+              { path: 'new', element: documentCreatePage, handle: { breadcrumb: 'Crear' } },
+              { path: ':id', element: documentDetailPage, handle: { breadcrumb: 'Detalle' } },
+              { path: ':id/edit', element: documentEditPage, handle: { breadcrumb: 'Editar' } },
+              { path: ':id/history', element: documentHistoryPage, handle: { breadcrumb: 'Historial' } },
             ],
           },
           {
@@ -94,12 +94,12 @@ export const router = createBrowserRouter([
           {
             path: 'audit-log',
             element: auditLogPage,
-            handle: { breadcrumb: 'Auditoria' },
+            handle: { breadcrumb: 'Auditoría' },
           },
           {
             path: 'settings',
             element: settingsPage,
-            handle: { breadcrumb: 'Configuracion' },
+            handle: { breadcrumb: 'Configuración' },
           },
         ],
       },
