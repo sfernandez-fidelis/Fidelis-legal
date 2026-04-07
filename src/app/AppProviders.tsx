@@ -30,12 +30,15 @@ function SessionSync() {
       // For SIGNED_IN / INITIAL_SESSION: build the app session using the
       // User object already provided by the event — no extra getSession()
       // or getUser() call, so no SDK mutex contention.
-      try {
-        const appSession = await getSharedAppSession(session.user);
-        client.setQueryData(queryKeys.session(), appSession);
-      } catch (error) {
-        captureAppError(error, { area: 'auth-state-change' });
-      }
+      // We do NOT await this call here to avoid blocking the SDK's initial 
+      // state emission (deadlock prevention).
+      void getSharedAppSession(session.user)
+        .then((appSession) => {
+          client.setQueryData(queryKeys.session(), appSession);
+        })
+        .catch((error) => {
+          captureAppError(error, { area: 'auth-state-change' });
+        });
     });
 
     return () => {

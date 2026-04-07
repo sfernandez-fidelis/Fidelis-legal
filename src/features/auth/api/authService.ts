@@ -119,12 +119,12 @@ export async function getSharedAppSession(user: User): Promise<AppSession> {
 async function buildAppSession(user: User): Promise<AppSession> {
   console.log('[AuthService] Building session for:', user.email);
   
-  // Each step has a per-operation timeout of 10s to ensure we don't hang indefinitely 
+  // Each step has a per-operation timeout of 30s to ensure we don't hang indefinitely 
   // if a specific DB call is stuck.
   const withTimeout = <T>(op: Promise<T>, name: string): Promise<T> => 
     Promise.race([
       op,
-      new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`Timed out: ${name}`)), 10_000))
+      new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`Timed out: ${name}`)), 30_000))
     ]);
 
   try {
