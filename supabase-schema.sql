@@ -585,8 +585,12 @@ create policy "organization_members_update_admins" on public.organization_member
 for update using (app.has_org_role(organization_id, 'admin')) with check (app.has_org_role(organization_id, 'admin'));
 
 drop policy if exists "organization_invitations_select_members" on public.organization_invitations;
-create policy "organization_invitations_select_members" on public.organization_invitations
-for select using (app.is_org_member(organization_id));
+drop policy if exists "organization_invitations_select_own_email" on public.organization_invitations;
+create policy "organization_invitations_select_own_email" on public.organization_invitations
+for select using (
+  email = (select email from public.profiles where id = auth.uid())
+  or app.is_org_member(organization_id)
+);
 
 drop policy if exists "organization_invitations_insert_admins" on public.organization_invitations;
 create policy "organization_invitations_insert_admins" on public.organization_invitations

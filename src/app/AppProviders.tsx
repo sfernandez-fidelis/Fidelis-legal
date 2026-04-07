@@ -5,7 +5,7 @@ import { queryClient } from '../lib/queryClient';
 import { supabase } from '../lib/supabase/client';
 import { queryKeys } from '../lib/queryKeys';
 import { Toaster } from '../components/ui/sonner';
-import { authService } from '../features/auth/api/authService';
+import { buildAppSession } from '../features/auth/api/authService';
 import { captureAppError } from '../lib/monitoring';
 
 function SessionSync() {
@@ -18,18 +18,20 @@ function SessionSync() {
         return;
       }
 
-      // TOKEN_REFRESHED: the SDK just renewed the JWT internally.
-      // Don't call getSessionUser() here — that would try to acquire
-      // the same internal Supabase lock that is still held by the
-      // refresh, causing a >15 s wait and a timeout error.
-      // Simply invalidate so React Query refetches when needed.
+      // TOKEN_REFRESHED: the SDK just renewed the JWT.
+      // Invalidate so React Query refetches with the fresh token.
+      // Do NOT call buildAppSession here — the new token is already
+      // stored in the SDK; the next mutation will use it automatically.
       if (event === 'TOKEN_REFRESHED') {
         await client.invalidateQueries({ queryKey: queryKeys.session() });
         return;
       }
 
+      // For SIGNED_IN / INITIAL_SESSION: build the app session using the
+      // User object already provided by the event — no extra getSession()
+      // or getUser() call, so no SDK mutex contention.
       try {
-        const appSession = await authService.getSessionUser();
+        const appSession = await buildAppSession(session.user);
         client.setQueryData(queryKeys.session(), appSession);
       } catch (error) {
         captureAppError(error, { area: 'auth-state-change' });

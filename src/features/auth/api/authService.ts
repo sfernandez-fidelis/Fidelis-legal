@@ -24,60 +24,20 @@ export const authService = {
       return inFlightSessionRequest;
     }
 
-    const timeout = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Session request timed out')), 30_000),
-    );
-
     const sessionFn = (async () => {
-      const { data, error } = await supabase.auth.getSession();
+      // Use getUser() which validates against the Supabase server without
+      // competing for the internal SDK refresh lock that getSession() uses.
+      // This prevents the deadlock when called during onAuthStateChange.
+      const { data, error } = await supabase.auth.getUser();
 
-      if (error) {
-        throw error;
-      }
-
-      const user = data.session?.user;
-
-      if (!user) {
+      if (error || !data.user) {
         return null;
       }
 
-      const profile = await ensureProfile(user);
-      await acceptPendingInvitations(user);
-      let membership = await fetchMembership(user.id);
-
-      if (!membership) {
-        membership = await bootstrapWorkspace(user);
-      }
-
-      return {
-        user: {
-          id: user.id,
-          email: user.email,
-          user_metadata: user.user_metadata,
-        },
-        profile: {
-          id: profile.id,
-          email: profile.email,
-          fullName: profile.full_name,
-        },
-        membership: {
-          organizationId: membership.organization_id,
-          role: membership.role,
-        },
-        activeOrganization: {
-          id: membership.organizations.id,
-          name: membership.organizations.name,
-          slug: membership.organizations.slug,
-        },
-        permissions: {
-          canManageOrganization: membership.role === 'owner' || membership.role === 'admin',
-          canEditContent: membership.role === 'owner' || membership.role === 'admin' || membership.role === 'editor',
-          canViewAuditLog: membership.role === 'owner' || membership.role === 'admin',
-        },
-      } satisfies AppSession;
+      return buildAppSession(data.user);
     })();
 
-    inFlightSessionRequest = Promise.race([timeout, sessionFn]);
+    inFlightSessionRequest = sessionFn;
 
     try {
       return await inFlightSessionRequest;
@@ -107,6 +67,46 @@ export const authService = {
     }
   },
 };
+
+// Exported so AppProviders.SessionSync can build the app session using
+// the User object already supplied by the onAuthStateChange event,
+// without calling getSession() or getUser() again (avoids the SDK mutex).
+export async function buildAppSession(user: User): Promise<AppSession> {
+  const profile = await ensureProfile(user);
+  await acceptPendingInvitations(user);
+  let membership = await fetchMembership(user.id);
+
+  if (!membership) {
+    membership = await bootstrapWorkspace(user);
+  }
+
+  return {
+    user: {
+      id: user.id,
+      email: user.email,
+      user_metadata: user.user_metadata,
+    },
+    profile: {
+      id: profile.id,
+      email: profile.email,
+      fullName: profile.full_name,
+    },
+    membership: {
+      organizationId: membership.organization_id,
+      role: membership.role,
+    },
+    activeOrganization: {
+      id: membership.organizations.id,
+      name: membership.organizations.name,
+      slug: membership.organizations.slug,
+    },
+    permissions: {
+      canManageOrganization: membership.role === 'owner' || membership.role === 'admin',
+      canEditContent: membership.role === 'owner' || membership.role === 'admin' || membership.role === 'editor',
+      canViewAuditLog: membership.role === 'owner' || membership.role === 'admin',
+    },
+  } satisfies AppSession;
+}
 
 async function ensureProfile(user: User) {
   const payload = {
