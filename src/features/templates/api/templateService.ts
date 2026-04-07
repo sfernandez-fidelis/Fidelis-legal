@@ -2,6 +2,7 @@ import { supabase } from '../../../lib/supabase/client';
 import type { TemplateData, TemplateDetailData, TemplateVersionData } from '../../../types';
 import { ContractType } from '../../../types';
 import { getDefaultTemplate } from './defaultTemplates';
+import { getTemplateTypeLabel } from '../templateLabels';
 
 function normalizeTemplateVersion(row: any, template: any): TemplateVersionData {
   return {
@@ -148,10 +149,7 @@ export const templateService = {
 
   async createTemplate(organizationId: string, userId: string, type: ContractType) {
     const now = new Date().toISOString();
-    const name = type
-      .split('_')
-      .map((chunk) => chunk.charAt(0) + chunk.slice(1).toLowerCase())
-      .join(' ');
+    const name = getTemplateTypeLabel(type);
 
     const { data: createdTemplate, error: templateError } = await supabase
       .from('document_templates')

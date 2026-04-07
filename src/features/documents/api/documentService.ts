@@ -73,11 +73,11 @@ function buildDocumentSearchText(document: CounterGuaranteeData) {
 function getContractTypeLabel(type: ContractType) {
   switch (type) {
     case ContractType.COUNTER_GUARANTEE_PRIVATE:
-      return 'Contragarantia privada';
+      return 'Contragarantía privada';
     case ContractType.COUNTER_GUARANTEE_PUBLIC:
-      return 'Contragarantia publica';
+      return 'Contragarantía pública';
     case ContractType.MORTGAGE_GUARANTEE:
-      return 'Garantia hipotecaria';
+      return 'Garantía hipotecaria';
     default:
       return 'Documento legal';
   }

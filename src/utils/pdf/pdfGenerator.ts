@@ -10,7 +10,7 @@ function buildBaseFileName(data: CounterGuaranteeData) {
     data.type === ContractType.COUNTER_GUARANTEE_PRIVATE
       ? 'Documento Privado'
       : data.type === ContractType.COUNTER_GUARANTEE_PUBLIC
-        ? 'Escritura Publica'
+        ? 'Escritura Pública'
         : 'Hipoteca';
   const policiesLabel = data.policies.map((policy) => policy.number).join(' y ');
   const entityLabel = data.principal.entityName || data.principal.name || 'Documento legal';

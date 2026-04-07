@@ -20,14 +20,14 @@ export function getDocumentDisplayName(document: CounterGuaranteeData) {
 export function getDocumentStatusLabel(status?: DocumentStatus) {
   switch (status) {
     case 'draft':
-      return 'Draft';
+      return 'Borrador';
     case 'ready':
-      return 'Ready';
+      return 'Listo';
     case 'generated':
-      return 'Generated';
+      return 'Generado';
     case 'archived':
-      return 'Archived';
+      return 'Archivado';
     default:
-      return 'Draft';
+      return 'Borrador';
   }
 }

@@ -79,7 +79,7 @@ export function createContact(overrides: Partial<ContactData> = {}): ContactData
 export function createTemplateDetail(overrides: Partial<TemplateDetailData> = {}): TemplateDetailData {
   return {
     id: 'tpl-1',
-    name: 'Counter Guarantee Private',
+    name: 'Contragarantía privada',
     type: ContractType.COUNTER_GUARANTEE_PRIVATE,
     content: '<p>Draft</p>',
     organizationId: 'org-1',
