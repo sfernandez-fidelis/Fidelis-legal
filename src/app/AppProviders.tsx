@@ -5,7 +5,7 @@ import { queryClient } from '../lib/queryClient';
 import { supabase } from '../lib/supabase/client';
 import { queryKeys } from '../lib/queryKeys';
 import { Toaster } from '../components/ui/sonner';
-import { buildAppSession } from '../features/auth/api/authService';
+import { getSharedAppSession } from '../features/auth/api/authService';
 import { captureAppError } from '../lib/monitoring';
 
 function SessionSync() {
@@ -31,7 +31,7 @@ function SessionSync() {
       // User object already provided by the event — no extra getSession()
       // or getUser() call, so no SDK mutex contention.
       try {
-        const appSession = await buildAppSession(session.user);
+        const appSession = await getSharedAppSession(session.user);
         client.setQueryData(queryKeys.session(), appSession);
       } catch (error) {
         captureAppError(error, { area: 'auth-state-change' });

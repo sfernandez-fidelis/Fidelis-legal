@@ -21,26 +21,44 @@ function toSlug(value: string) {
 export const authService = {
   async getSessionUser(): Promise<AppSession | null> {
     if (inFlightSessionRequest) {
+      console.log('[AuthService] Returning existing in-flight session request.');
       return inFlightSessionRequest;
     }
 
-    const sessionFn = (async () => {
-      // Use getUser() which validates against the Supabase server without
-      // competing for the internal SDK refresh lock that getSession() uses.
-      // This prevents the deadlock when called during onAuthStateChange.
-      const { data, error } = await supabase.auth.getUser();
+    const timeoutSecs = 20;
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`Session request timed out after ${timeoutSecs}s`)), timeoutSecs * 1000),
+    );
 
-      if (error || !data.user) {
-        return null;
+    const sessionFn = (async () => {
+      console.log('[AuthService] Fetching session via getUser...');
+      // Use getSession first, then getUser to avoid deadlock in some SDK versions
+      // during the initial load or token refresh.
+      const { data: { session: localSession } } = await supabase.auth.getSession();
+      
+      if (!localSession?.user) {
+        console.log('[AuthService] No local session found, trying getUser (server-side check)...');
+        const { data, error } = await supabase.auth.getUser();
+        if (error || !data.user) {
+          console.log('[AuthService] No user found on server either.');
+          return null;
+        }
+        return getSharedAppSession(data.user);
       }
 
-      return buildAppSession(data.user);
+      console.log('[AuthService] Found local session, using it to build/sync app session.');
+      return getSharedAppSession(localSession.user);
     })();
 
-    inFlightSessionRequest = sessionFn;
+    inFlightSessionRequest = Promise.race([timeout, sessionFn]);
 
     try {
-      return await inFlightSessionRequest;
+      const result = await inFlightSessionRequest;
+      console.log('[AuthService] getSessionUser resolved successfully.');
+      return result;
+    } catch (err) {
+      console.error('[AuthService] getSessionUser failed or timed out:', err);
+      throw err;
     } finally {
       inFlightSessionRequest = null;
     }
@@ -68,44 +86,93 @@ export const authService = {
   },
 };
 
-// Exported so AppProviders.SessionSync can build the app session using
-// the User object already supplied by the onAuthStateChange event,
-// without calling getSession() or getUser() again (avoids the SDK mutex).
-export async function buildAppSession(user: User): Promise<AppSession> {
-  const profile = await ensureProfile(user);
-  await acceptPendingInvitations(user);
-  let membership = await fetchMembership(user.id);
+// Internal map to store building-session promises keyed by user ID.
+// This prevents multiple components/events from triggering buildAppSession for the same user simultaneously.
+const buildingSessions = new Map<string, Promise<AppSession>>();
 
-  if (!membership) {
-    membership = await bootstrapWorkspace(user);
+/**
+ * Returns a (possibly existing) promise to build the AppSession for a given user.
+ * This is the primary gatekeeper for session synchronization.
+ */
+export async function getSharedAppSession(user: User): Promise<AppSession> {
+  const existing = buildingSessions.get(user.id);
+  if (existing) {
+    console.log('[AuthService] Sharing existing buildAppSession promise for:', user.id);
+    return existing;
   }
 
-  return {
-    user: {
-      id: user.id,
-      email: user.email,
-      user_metadata: user.user_metadata,
-    },
-    profile: {
-      id: profile.id,
-      email: profile.email,
-      fullName: profile.full_name,
-    },
-    membership: {
-      organizationId: membership.organization_id,
-      role: membership.role,
-    },
-    activeOrganization: {
-      id: membership.organizations.id,
-      name: membership.organizations.name,
-      slug: membership.organizations.slug,
-    },
-    permissions: {
-      canManageOrganization: membership.role === 'owner' || membership.role === 'admin',
-      canEditContent: membership.role === 'owner' || membership.role === 'admin' || membership.role === 'editor',
-      canViewAuditLog: membership.role === 'owner' || membership.role === 'admin',
-    },
-  } satisfies AppSession;
+  const promise = (async () => {
+    try {
+      return await buildAppSession(user);
+    } finally {
+      // Clear after a small buffer to handle rapid sequential events if needed,
+      // but long enough that concurrent calls during the build phase share the promise.
+      setTimeout(() => buildingSessions.delete(user.id), 5000);
+    }
+  })();
+
+  buildingSessions.set(user.id, promise);
+  return promise;
+}
+
+// Internal function to perform the actual session building work.
+async function buildAppSession(user: User): Promise<AppSession> {
+  console.log('[AuthService] Building session for:', user.email);
+  
+  // Each step has a per-operation timeout of 10s to ensure we don't hang indefinitely 
+  // if a specific DB call is stuck.
+  const withTimeout = <T>(op: Promise<T>, name: string): Promise<T> => 
+    Promise.race([
+      op,
+      new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`Timed out: ${name}`)), 10_000))
+    ]);
+
+  try {
+    console.log('[AuthService] Step 1: Ensuring profile...');
+    const profile = await withTimeout(ensureProfile(user), 'ensureProfile');
+    
+    console.log('[AuthService] Step 2: Checking invitations...');
+    await withTimeout(acceptPendingInvitations(user), 'acceptPendingInvitations');
+    
+    console.log('[AuthService] Step 3: Fetching membership...');
+    let membership = await withTimeout(fetchMembership(user.id), 'fetchMembership');
+
+    if (!membership) {
+      console.log('[AuthService] Step 4: Bootstrapping workspace...');
+      membership = await withTimeout(bootstrapWorkspace(user), 'bootstrapWorkspace');
+    }
+
+    console.log('[AuthService] Session built successfully.');
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        user_metadata: user.user_metadata,
+      },
+      profile: {
+        id: profile.id,
+        email: profile.email,
+        fullName: profile.full_name,
+      },
+      membership: {
+        organizationId: membership.organization_id,
+        role: membership.role,
+      },
+      activeOrganization: {
+        id: membership.organizations.id,
+        name: membership.organizations.name,
+        slug: membership.organizations.slug,
+      },
+      permissions: {
+        canManageOrganization: membership.role === 'owner' || membership.role === 'admin',
+        canEditContent: membership.role === 'owner' || membership.role === 'admin' || membership.role === 'editor',
+        canViewAuditLog: membership.role === 'owner' || membership.role === 'admin',
+      },
+    } satisfies AppSession;
+  } catch (error) {
+    console.error('[AuthService] Critical error building app session:', error);
+    throw error;
+  }
 }
 
 async function ensureProfile(user: User) {

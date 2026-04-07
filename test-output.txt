@@ -1,0 +1,217 @@
+﻿
+> react-example@0.0.0 test
+> vitest run --coverage --reporter=verbose
+
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mC:/Users/sfernandez/Documents/Analysis/Legal[39m
+      [2mCoverage enabled with [22m[33mv8[39m
+
+ [31m├ù[39m src/features/auth/api/authService.test.ts[2m > [22mauthService[2m > [22mreturns null when no user session exists[32m 22[2mms[22m[39m
+[31m   ÔåÆ promise rejected "TypeError: supabaseÔÇª" instead of resolving[39m
+ [31m├ù[39m src/features/auth/api/authService.test.ts[2m > [22mauthService[2m > [22mhydrates profile, accepts invites, and returns app session data[32m 1[2mms[22m[39m
+[31m   ÔåÆ supabase.auth.getUser is not a function[39m
+ [32mÔ£ô[39m src/features/auth/api/authService.test.ts[2m > [22mauthService[2m > [22mdelegates login and logout to Supabase auth[32m 2[2mms[22m[39m
+ [31m├ù[39m src/features/auth/api/authService.test.ts[2m > [22mauthService[2m > [22mreuses the existing organization when bootstrap hits a duplicate slug conflict[32m 1[2mms[22m[39m
+[31m   ÔåÆ supabase.auth.getUser is not a function[39m
+ [32mÔ£ô[39m src/features/contacts/api/contactService.test.ts[2m > [22mcontactService[2m > [22mlists contacts with client-side filters and pagination[32m 4[2mms[22m[39m
+ [32mÔ£ô[39m src/features/contacts/api/contactService.test.ts[2m > [22mcontactService[2m > [22mupdates an existing contact when a matching external key is found[32m 3[2mms[22m[39m
+ [32mÔ£ô[39m src/features/contacts/api/contactService.test.ts[2m > [22mcontactService[2m > [22mextracts related contacts from a represented party[32m 3[2mms[22m[39m
+ [32mÔ£ô[39m src/features/contacts/contactUtils.test.ts[2m > [22mcontactUtils[2m > [22mnormalizes accents and whitespace for searching[32m 2[2mms[22m[39m
+ [32mÔ£ô[39m src/features/contacts/contactUtils.test.ts[2m > [22mcontactUtils[2m > [22mbuilds duplicate keys from strongest identifiers first[32m 0[2mms[22m[39m
+ [32mÔ£ô[39m src/features/contacts/contactUtils.test.ts[2m > [22mcontactUtils[2m > [22mmatches search across nested contact fields[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m src/features/contacts/contactUtils.test.ts[2m > [22mcontactUtils[2m > [22msorts contacts by recency, frequency, and name[32m 16[2mms[22m[39m
+ [32mÔ£ô[39m src/features/contacts/contactUtils.test.ts[2m > [22mcontactUtils[2m > [22mgroups duplicates and merges party details safely[32m 3[2mms[22m[39m
+ [32mÔ£ô[39m src/features/templates/api/templateService.test.ts[2m > [22mtemplateService[2m > [22mcreates a template and its initial version[32m 7[2mms[22m[39m
+ [32mÔ£ô[39m src/features/templates/api/templateService.test.ts[2m > [22mtemplateService[2m > [22mpublishes the current draft version[32m 3[2mms[22m[39m
+ [32mÔ£ô[39m src/features/documents/api/documentService.test.ts[2m > [22mdocumentService[2m > [22mlists documents with normalized payloads[32m 9[2mms[22m[39m
+ [32mÔ£ô[39m src/features/documents/api/documentService.test.ts[2m > [22mdocumentService[2m > [22msaves a new document and links generated contacts[32m 6[2mms[22m[39m
+ [32mÔ£ô[39m src/utils/templateEngine.test.ts[2m > [22mcompileTemplate[2m > [22mfalls back to the default template when no custom content is provided[32m 33[2mms[22m[39m
+ [32mÔ£ô[39m src/utils/templateEngine.test.ts[2m > [22mcompileTemplate[2m > [22mreplaces rich text placeholders with document data[32m 4[2mms[22m[39m
+ [32mÔ£ô[39m src/utils/templateEngine.test.ts[2m > [22mcompileTemplate[2m > [22mrenders placeholders when data is missing[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m src/utils/word/wordGenerator.test.ts[2m > [22mbuildBaseFileName[2m > [22mbuilds a readable file name and strips reserved characters[32m 3[2mms[22m[39m
+ [32mÔ£ô[39m src/utils/word/wordGenerator.test.ts[2m > [22mbuildBaseFileName[2m > [22mrenders a docx artifact for a generated document[32m 118[2mms[22m[39m
+node.exe : 
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo        
+      : NotSpecified: (:  
+  String) [], RemoteExc   
+ eption
+    + FullyQualifiedError 
+   Id : NativeCommandErr  
+  or
+ 
+[31mÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+[39m[1m[41m Failed 
+Tests 3 [49m[22m[31mÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[39m
+
+[41m[1m FAIL [22m[49m 
+src/features/auth/api/auth
+Service.test.ts[2m > 
+[22mauthService[2m > 
+[22mreturns null when no 
+user session exists
+[31m[1mAssertionError[2
+2m: promise rejected 
+"TypeError: supabaseÔÇª" 
+instead of resolving[39m
+[36m [2mÔØ»[22m src/fea
+tures/auth/api/authService
+.test.ts:[2m37:46[22m[3
+9m
+    [90m 35| [39m    
+})[33m;[39m
+    [90m 36| [39m
+    [90m 37| [39m    
+[35mawait[39m [34mexpec
+t[39m(authService[33m.[
+39m[34mgetSessionUser[39
+m())[33m.[39mresolves[3
+3m.[39m[34mtoBeNull[39m
+()[33m;[39m
+    [90m   | [39m       
+                          
+            [31m^[39m
+    [90m 38| [39m  
+})[33m;[39m
+    [90m 39| [39m
+
+[31m[1mCaused by: 
+TypeError[22m: 
+supabase.auth.getUser is 
+not a function[39m
+[36m [2mÔØ»[22m src/fea
+tures/auth/api/authService
+.ts:[2m31:51[22m[39m
+[90m [2mÔØ»[22m 
+Object.getSessionUser src/
+features/auth/api/authServ
+ice.ts:[2m38:5[22m[39m
+[90m [2mÔØ»[22m src/fea
+tures/auth/api/authService
+.test.ts:[2m37:30[22m[3
+9m
+
+[31m[2mÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ
+»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»Ô
+Ä»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»[1/3]ÔÄ»[22m[39m
+
+[41m[1m FAIL [22m[49m 
+src/features/auth/api/auth
+Service.test.ts[2m > 
+[22mauthService[2m > 
+[22mhydrates profile, 
+accepts invites, and 
+returns app session data
+[31m[1mTypeError[22m: 
+supabase.auth.getUser is 
+not a function[39m
+[36m [2mÔØ»[22m src/fea
+tures/auth/api/authService
+.ts:[2m31:51[22m[39m
+    [90m 29| [39m      
+// competing for the 
+internal SDK refresh lock 
+that getSession()ÔÇª
+    [90m 30| [39m      
+// This prevents the 
+deadlock when called 
+during onAuthStateChanÔÇª
+    [90m 31| [39m      
+[35mconst[39m { 
+data[33m,[39m error } 
+[33m=[39m 
+[35mawait[39m supabase[
+33m.[39mauth[33m.[39m[
+34mgetUser[39m()[33m;[3
+9m
+
+    [90m   | [39m       
+                          
+                 
+[31m^[39m
+    [90m 32| [39m
+    [90m 33| [39m      
+[35mif[39m (error 
+[33m||[39m [33m![39mda
+ta[33m.[39muser) {
+[90m [2mÔØ»[22m 
+Object.getSessionUser src/
+features/auth/api/authServ
+ice.ts:[2m38:5[22m[39m
+[90m [2mÔØ»[22m src/fea
+tures/auth/api/authService
+.test.ts:[2m114:39[22m[
+39m
+
+[31m[2mÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ
+»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»Ô
+Ä»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»[2/3]ÔÄ»[22m[39m
+
+[41m[1m FAIL [22m[49m 
+src/features/auth/api/auth
+Service.test.ts[2m > 
+[22mauthService[2m > 
+[22mreuses the existing 
+organization when 
+bootstrap hits a 
+duplicate slug conflict
+[31m[1mTypeError[22m: 
+supabase.auth.getUser is 
+not a function[39m
+[36m [2mÔØ»[22m src/fea
+tures/auth/api/authService
+.ts:[2m31:51[22m[39m
+    [90m 29| [39m      
+// competing for the 
+internal SDK refresh lock 
+that getSession()ÔÇª
+    [90m 30| [39m      
+// This prevents the 
+deadlock when called 
+during onAuthStateChanÔÇª
+    [90m 31| [39m      
+[35mconst[39m { 
+data[33m,[39m error } 
+[33m=[39m 
+[35mawait[39m supabase[
+33m.[39mauth[33m.[39m[
+34mgetUser[39m()[33m;[3
+9m
+    [90m   | [39m       
+                          
+                 
+[31m^[39m
+    [90m 32| [39m
+    [90m 33| [39m      
+[35mif[39m (error 
+[33m||[39m [33m![39mda
+ta[33m.[39muser) {
+[90m [2mÔØ»[22m 
+Object.getSessionUser src/
+features/auth/api/authServ
+ice.ts:[2m38:5[22m[39m
+[90m [2mÔØ»[22m src/fea
+tures/auth/api/authService
+.test.ts:[2m237:39[22m[
+39m
+
+[31m[2mÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ
+»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»Ô
+Ä»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»[3/3]ÔÄ»[22m[39m
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m6 passed[39m[22m[90m (7)[39m
+[2m      Tests [22m [1m[31m3 failed[39m[22m[2m | [22m[1m[32m18 passed[39m[22m[90m (21)[39m
+[2m   Start at [22m 10:47:26
+[2m   Duration [22m 10.25s[2m (transform 797ms, setup 2.09s, collect 13.10s, tests 261ms, environment 11.54s, prepare 2.72s)[22m
+

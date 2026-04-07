@@ -1,0 +1,55 @@
+﻿
+> react-example@0.0.0 test
+> vitest run --coverage --reporter=verbose
+
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mC:/Users/sfernandez/Documents/Analysis/Legal[39m
+      [2mCoverage enabled with [22m[33mv8[39m
+
+ [32mÔ£ô[39m src/features/auth/api/authService.test.ts[2m > [22mauthService[2m > [22mreturns null when no user session exists[32m 4[2mms[22m[39m
+ [32mÔ£ô[39m src/features/auth/api/authService.test.ts[2m > [22mauthService[2m > [22mhydrates profile, accepts invites, and returns app session data[32m 8[2mms[22m[39m
+ [32mÔ£ô[39m src/features/auth/api/authService.test.ts[2m > [22mauthService[2m > [22mdelegates login and logout to Supabase auth[32m 2[2mms[22m[39m
+ [32mÔ£ô[39m src/features/auth/api/authService.test.ts[2m > [22mauthService[2m > [22mreuses the existing organization when bootstrap hits a duplicate slug conflict[32m 7[2mms[22m[39m
+ [32mÔ£ô[39m src/features/documents/api/documentService.test.ts[2m > [22mdocumentService[2m > [22mlists documents with normalized payloads[32m 9[2mms[22m[39m
+ [32mÔ£ô[39m src/features/documents/api/documentService.test.ts[2m > [22mdocumentService[2m > [22msaves a new document and links generated contacts[32m 5[2mms[22m[39m
+ [32mÔ£ô[39m src/features/contacts/contactUtils.test.ts[2m > [22mcontactUtils[2m > [22mnormalizes accents and whitespace for searching[32m 5[2mms[22m[39m
+ [32mÔ£ô[39m src/features/contacts/contactUtils.test.ts[2m > [22mcontactUtils[2m > [22mbuilds duplicate keys from strongest identifiers first[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m src/features/contacts/contactUtils.test.ts[2m > [22mcontactUtils[2m > [22mmatches search across nested contact fields[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m src/features/contacts/contactUtils.test.ts[2m > [22mcontactUtils[2m > [22msorts contacts by recency, frequency, and name[32m 69[2mms[22m[39m
+ [32mÔ£ô[39m src/features/contacts/contactUtils.test.ts[2m > [22mcontactUtils[2m > [22mgroups duplicates and merges party details safely[32m 2[2mms[22m[39m
+ [32mÔ£ô[39m src/features/contacts/api/contactService.test.ts[2m > [22mcontactService[2m > [22mlists contacts with client-side filters and pagination[32m 10[2mms[22m[39m
+ [32mÔ£ô[39m src/features/contacts/api/contactService.test.ts[2m > [22mcontactService[2m > [22mupdates an existing contact when a matching external key is found[32m 6[2mms[22m[39m
+ [32mÔ£ô[39m src/features/contacts/api/contactService.test.ts[2m > [22mcontactService[2m > [22mextracts related contacts from a represented party[32m 6[2mms[22m[39m
+ [32mÔ£ô[39m src/features/templates/api/templateService.test.ts[2m > [22mtemplateService[2m > [22mcreates a template and its initial version[32m 4[2mms[22m[39m
+ [32mÔ£ô[39m src/features/templates/api/templateService.test.ts[2m > [22mtemplateService[2m > [22mpublishes the current draft version[32m 2[2mms[22m[39m
+ [32mÔ£ô[39m src/utils/word/wordGenerator.test.ts[2m > [22mbuildBaseFileName[2m > [22mbuilds a readable file name and strips reserved characters[32m 3[2mms[22m[39m
+ [32mÔ£ô[39m src/utils/templateEngine.test.ts[2m > [22mcompileTemplate[2m > [22mfalls back to the default template when no custom content is provided[32m 33[2mms[22m[39m
+ [32mÔ£ô[39m src/utils/templateEngine.test.ts[2m > [22mcompileTemplate[2m > [22mreplaces rich text placeholders with document data[32m 2[2mms[22m[39m
+ [32mÔ£ô[39m src/utils/templateEngine.test.ts[2m > [22mcompileTemplate[2m > [22mrenders placeholders when data is missing[32m 1[2mms[22m[39m
+ [32mÔ£ô[39m src/utils/word/wordGenerator.test.ts[2m > [22mbuildBaseFileName[2m > [22mrenders a docx artifact for a generated document[32m 106[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m7 passed[39m[22m[90m (7)[39m
+[2m      Tests [22m [1m[32m21 passed[39m[22m[90m (21)[39m
+[2m   Start at [22m 10:49:34
+[2m   Duration [22m 9.94s[2m (transform 1.57s, setup 2.44s, collect 13.34s, tests 311ms, environment 12.27s, prepare 2.85s)[22m
+
+[34m % [39m[2mCoverage report from [22m[33mv8[39m
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------|---------|----------|---------|---------|-------------------
+All files          |   60.91 |    39.85 |   69.56 |   60.91 |                   
+ features/auth/api |   87.73 |    41.46 |     100 |   87.73 |                   
+  authService.ts   |   87.73 |    41.46 |     100 |   87.73 | ...40-241,253-254 
+ features/contacts |   93.71 |    41.89 |     100 |   93.71 |                   
+  contactUtils.ts  |   93.71 |    41.89 |     100 |   93.71 | ...48-149,171-172 
+ ...s/contacts/api |   47.31 |    22.22 |   56.25 |   47.31 |                   
+  ...actService.ts |   47.31 |    22.22 |   56.25 |   47.31 | ...89-444,447-459 
+ .../documents/api |   61.45 |    28.57 |   64.28 |   61.45 |                   
+  ...entService.ts |   61.45 |    28.57 |   64.28 |   61.45 | ...25,427,429,431 
+ .../templates/api |    27.4 |       25 |   18.18 |    27.4 |                   
+  ...ateService.ts |    27.4 |       25 |   18.18 |    27.4 | ...28-377,380-395 
+ utils             |    87.5 |    66.66 |     100 |    87.5 |                   
+  ...lateEngine.ts |    87.5 |    66.66 |     100 |    87.5 | ...38,48-49,59-60 
+ utils/word        |   95.74 |    58.33 |     100 |   95.74 |                   
+  wordGenerator.ts |   95.74 |    58.33 |     100 |   95.74 | 49,70,72-73       
+-------------------|---------|----------|---------|---------|-------------------
