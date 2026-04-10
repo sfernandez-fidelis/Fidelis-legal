@@ -36,6 +36,21 @@ describe('compileTemplate', () => {
     expect(html).not.toContain('<mark>{{FECHA_CONTRATO}}</mark>');
   });
 
+  it('formats CUI and act dates in the legal style for template placeholders', () => {
+    const html = compileTemplate(
+      `
+        <p>{{DATOS_FIADO}}</p>
+      `,
+      createDocument({
+        principal: createDocument().principal,
+      }),
+    );
+
+    expect(html).toContain('un mil doscientos treinta y cuatro, cincuenta y seis mil setecientos ochenta y nueve');
+    expect(html).toContain('(1234 56789 0101)');
+    expect(html).toContain('del año dos mil veintiseis');
+  });
+
   it('renders placeholders when data is missing', () => {
     const html = compileTemplate(
       '<p>{{BENEFICIARIO}} {{DIRECCION_NOTIFICACIONES}}</p>',

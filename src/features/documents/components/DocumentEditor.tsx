@@ -171,8 +171,7 @@ export function DocumentEditor({
                     : 'border-stone-200 bg-white text-stone-500 hover:border-stone-300'
                 }`}
                 key={item}
-                  disabled={!permissions.canEditContent}
-                  onClick={() => setStep(index)}
+                onClick={() => setStep(index)}
                 type="button"
               >
                 <p className="text-xs uppercase tracking-[0.2em]">{String(index + 1).padStart(2, '0')}</p>

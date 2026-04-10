@@ -170,14 +170,20 @@ export function ContactEditorForm({
             <input
               className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500"
               maxLength={13}
-              onChange={(event) => setParty({ ...party, idNumber: event.target.value.replace(/\D/g, '') })}
+              onChange={(event) => {
+                const value = event.target.value.replace(/\D/g, '');
+                setParty({ ...party, idNumber: value, cui: value });
+              }}
               value={party.idNumber}
             />
           </Field>
           <Field label="CUI">
             <input
               className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500"
-              onChange={(event) => setParty({ ...party, cui: event.target.value.replace(/\D/g, '') })}
+              onChange={(event) => {
+                const value = event.target.value.replace(/\D/g, '');
+                setParty({ ...party, cui: value, idNumber: value });
+              }}
               value={party.cui}
             />
           </Field>

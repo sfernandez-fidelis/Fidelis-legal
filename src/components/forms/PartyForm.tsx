@@ -314,7 +314,10 @@ export default function PartyForm({
           <input
             className={`w-full rounded-lg border bg-gray-50 p-2.5 font-mono outline-none transition-all focus:border-transparent ${dpiError ? 'border-red-300 focus:ring-2 focus:ring-red-500' : 'border-gray-200 focus:ring-2 focus:ring-brand-500'}`}
             maxLength={13}
-            onChange={(event) => onChange({ ...party, idNumber: event.target.value.replace(/\D/g, '') })}
+            onChange={(event) => {
+              const value = event.target.value.replace(/\D/g, '');
+              onChange({ ...party, idNumber: value, cui: value });
+            }}
             placeholder="1965878401501"
             type="text"
             value={party.idNumber}
