@@ -34,6 +34,7 @@ export function createDocument(overrides: Partial<CounterGuaranteeData> = {}): C
     policies: [{ number: 'PZ-001', type: 'Cumplimiento', amount: 5000, amountInWords: 'Cinco mil quetzales' }],
     notificationAddress: 'Zona 10, Ciudad de Guatemala',
     beneficiaryName: 'Municipalidad de Guatemala',
+    previewInsertions: [],
     signatureNames: ['Ana Principal', 'Luis Fiador'],
     createdAt: '2026-04-05T10:00:00.000Z',
     updatedAt: '2026-04-05T11:00:00.000Z',

@@ -46,6 +46,8 @@ function buildInitialData(initialType: ContractType, initialData?: CounterGuaran
     policies: [{ number: '', type: '', amount: 0, amountInWords: '' }],
     notificationAddress: '',
     beneficiaryName: '',
+    additionalText: '',
+    previewInsertions: [],
     signatureNames: [''],
     createdAt: new Date().toISOString(),
   };
@@ -343,6 +345,7 @@ export function DocumentEditor({
                   </button>
                 </div>
               </div>
+
             </div>
           ) : null}
         </div>
@@ -436,7 +439,14 @@ export function DocumentEditor({
         </div>
 
         <div className="min-h-[620px]">
-          <LivePreview data={data} loading={templateLoading} templateContent={templateContent} type={data.type} />
+          <LivePreview
+            canEditPreviewInsertions={permissions.canEditContent}
+            data={data}
+            loading={templateLoading}
+            onPreviewInsertionsChange={(previewInsertions) => updateData({ ...data, previewInsertions })}
+            templateContent={templateContent}
+            type={data.type}
+          />
         </div>
       </aside>
     </div>

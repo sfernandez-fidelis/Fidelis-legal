@@ -55,6 +55,11 @@ export interface Policy {
   amountInWords: string;
 }
 
+export interface DocumentPreviewInsertion {
+  anchorId: string;
+  text: string;
+}
+
 export interface CounterGuaranteeData {
   id?: string;
   organizationId?: string;
@@ -72,6 +77,8 @@ export interface CounterGuaranteeData {
   policies: Policy[];
   notificationAddress: string;
   beneficiaryName: string;
+  additionalText?: string;
+  previewInsertions?: DocumentPreviewInsertion[];
   signatureNames: string[];
   createdAt: string;
   updatedAt?: string;

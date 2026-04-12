@@ -1,8 +1,5 @@
 import { jsPDF } from 'jspdf';
 import { CounterGuaranteeData, ContractType } from '../../types';
-import { generateCounterGuaranteePrivateHTML } from './templates/CounterGuaranteePrivateTemplate';
-import { generateCounterGuaranteePublicHTML } from './templates/CounterGuaranteePublicTemplate';
-import { generateMortgageGuaranteeHTML } from './templates/MortgageGuaranteeTemplate';
 import { compileTemplate } from '../templateEngine';
 
 function buildBaseFileName(data: CounterGuaranteeData) {
@@ -18,20 +15,7 @@ function buildBaseFileName(data: CounterGuaranteeData) {
 }
 
 function getHtml(data: CounterGuaranteeData, customTemplateStr?: string) {
-  if (customTemplateStr) {
-    return compileTemplate(customTemplateStr, data);
-  }
-
-  switch (data.type) {
-    case ContractType.COUNTER_GUARANTEE_PRIVATE:
-      return generateCounterGuaranteePrivateHTML(data);
-    case ContractType.COUNTER_GUARANTEE_PUBLIC:
-      return generateCounterGuaranteePublicHTML(data);
-    case ContractType.MORTGAGE_GUARANTEE:
-      return generateMortgageGuaranteeHTML(data);
-    default:
-      return generateCounterGuaranteePrivateHTML(data);
-  }
+  return compileTemplate(customTemplateStr ?? '', data);
 }
 
 export async function renderContractPDF(data: CounterGuaranteeData, customTemplateStr?: string) {

@@ -63,4 +63,53 @@ describe('compileTemplate', () => {
     expect(html).toContain('[BENEFICIARIO]');
     expect(html).toContain('[DIRECCI');
   });
+
+  it('injects additional text before signatures when no placeholder is provided', () => {
+    const html = compileTemplate(
+      '<p>Texto base</p>{{FIRMAS}}',
+      createDocument({
+        additionalText: 'Cláusula libre\ncon detalle.',
+      }),
+    );
+
+    expect(html).toContain('Texto adicional');
+    expect(html).toContain('Cláusula libre<br />con detalle.');
+    expect(html.indexOf('Texto adicional')).toBeLessThan(html.indexOf('BRASIL HAROLDO ARENAS MORALES'));
+  });
+
+  it('replaces the explicit additional text placeholder and escapes html', () => {
+    const html = compileTemplate(
+      '<p>{{TEXTO_ADICIONAL}}</p>',
+      createDocument({
+        additionalText: 'Se agrega <script>alert(1)</script>',
+      }),
+    );
+
+    expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
+    expect(html).not.toContain('<script>alert(1)</script>');
+  });
+
+  it('adds preview highlights and editable insertion slots in preview mode', () => {
+    const html = compileTemplate(
+      '<p>PRIMERA: {{BENEFICIARIO}}</p>',
+      createDocument(),
+      { mode: 'preview' },
+    );
+
+    expect(html).toContain('preview-variable-highlight');
+    expect(html).toContain('data-insertion-anchor="slot-1"');
+  });
+
+  it('exports manual insertions without preview styling', () => {
+    const html = compileTemplate(
+      '<p>PRIMERA: Documento base</p>',
+      createDocument({
+        previewInsertions: [{ anchorId: 'slot-1', text: 'Texto manual especial' }],
+      }),
+    );
+
+    expect(html).toContain('Texto manual especial');
+    expect(html).not.toContain('preview-inline-slot');
+    expect(html).not.toContain('preview-variable-highlight');
+  });
 });

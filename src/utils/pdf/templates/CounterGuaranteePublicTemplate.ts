@@ -1,27 +1,37 @@
 import { CounterGuaranteeData, PartyDetails } from '../../../types';
+import { decorateVariableHtml, type TemplateRenderMode } from '../../documentAdditionalText';
 import { formatDPI, formatDateInWords, formatNumberWithWords, formatPolicyType, getPartyIdentityNumber } from '../formatters';
 
-const getPartyLegalString = (party: PartyDetails) => {
+const getPartyLegalString = (party: PartyDetails, mode: TemplateRenderMode) => {
   const base = `${party.name}, de ${party.age} años de edad, ${party.maritalStatus}, ${party.profession}, guatemalteco, de este domicilio, se identifica con el Documento Personal de Identificación con Código Único de Identificación número ${formatDPI(getPartyIdentityNumber(party))}`;
 
   if (party.isRepresenting) {
-    return `${base}, quien actúa en su calidad de ${party.role} de la entidad ${party.entityName}, calidad que acredita con el Acta Notarial de su nombramiento autorizada en esta ciudad por el Notario ${party.notaryName}, el ${formatDateInWords(party.actDate, { includeYearLabel: true })}, la cual se encuentra debidamente inscrita en el Registro Mercantil General de la República al número ${formatNumberWithWords(party.regNumber || '')}, folio ${formatNumberWithWords(party.regFolio || '')} del libro ${formatNumberWithWords(party.regBook || '')} de Auxiliares de Comercio`;
+    return decorateVariableHtml(
+      `${base}, quien actúa en su calidad de ${party.role} de la entidad ${party.entityName}, calidad que acredita con el Acta Notarial de su nombramiento autorizada en esta ciudad por el Notario ${party.notaryName}, el ${formatDateInWords(party.actDate, { includeYearLabel: true })}, la cual se encuentra debidamente inscrita en el Registro Mercantil General de la República al número ${formatNumberWithWords(party.regNumber || '')}, folio ${formatNumberWithWords(party.regFolio || '')} del libro ${formatNumberWithWords(party.regBook || '')} de Auxiliares de Comercio`,
+      mode,
+    );
   }
 
-  return base;
+  return decorateVariableHtml(base, mode);
 };
 
-export const generateCounterGuaranteePublicHTML = (data: CounterGuaranteeData) => {
-  const principalStr = getPartyLegalString(data.principal);
-  const guarantorsStr = data.guarantors.map((guarantor) => getPartyLegalString(guarantor)).join('; ');
+export const generateCounterGuaranteePublicHTML = (
+  data: CounterGuaranteeData,
+  additionalTextHtml = '',
+  mode: TemplateRenderMode = 'export',
+) => {
+  const principalStr = getPartyLegalString(data.principal, mode);
+  const guarantorsStr = data.guarantors.map((guarantor) => getPartyLegalString(guarantor, mode)).join('; ');
 
   const policiesStr = data.policies
-    .map(
-      (policy) =>
+    .map((policy) =>
+      decorateVariableHtml(
         `póliza número ${formatNumberWithWords(policy.number)}, Clase ${formatPolicyType(policy.type)}, por el valor de ${policy.amountInWords} (Q.${policy.amount.toLocaleString('en-US', {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
         })})`,
+        mode,
+      ),
     )
     .join(', ');
 
@@ -31,9 +41,11 @@ export const generateCounterGuaranteePublicHTML = (data: CounterGuaranteeData) =
     <div style="font-family: 'Times New Roman', serif; line-height: 1.8; text-align: justify; font-size: 12pt; padding: 40px;">
       <p style="text-align: center; font-weight: bold; font-size: 14pt; margin-bottom: 30px;">NUMERO _________ (____). ESCRITURA PÚBLICA DE CONTRAGARANTÍA.</p>
 
-      <p>En la ciudad de Guatemala, el ${dateStr}, Ante Mí: ________________________, Notario, comparecen: POR UNA PARTE: ${principalStr}, a quien en lo sucesivo se le denominará "EL FIADO"; ${data.guarantors.length > 0 ? `Y POR OTRA PARTE: ${guarantorsStr}, a quienes se les denominará "LOS FIADORES SOLIDARIOS";` : ''} Los comparecientes me aseguran hallarse en el libre ejercicio de sus derechos civiles y que por el presente instrumento celebran <strong>CONTRATO DE CONTRAGARANTÍA</strong> contenido en las siguientes cláusulas: <strong>PRIMERA:</strong> Manifiesta "EL FIADO" que ha solicitado a la entidad AFIANZADORA FIDELIS, SOCIEDAD ANÓNIMA, la emisión de la(s) ${policiesStr}, a favor de ${data.beneficiaryName}. <strong>SEGUNDA:</strong> Por el presente acto, "EL FIADO" y "LOS FIADORES SOLIDARIOS" se constituyen en fiadores solidarios y mancomunados de AFIANZADORA FIDELIS, SOCIEDAD ANÓNIMA, por todas las sumas que ésta llegare a pagar en concepto de la(s) póliza(s) identificada(s) en la cláusula anterior... [RESTO DEL TEXTO LEGAL DE ESCRITURA PÚBLICA]</p>
+      <p>En la ciudad de Guatemala, el ${decorateVariableHtml(dateStr, mode)}, Ante Mí: ________________________, Notario, comparecen: POR UNA PARTE: ${principalStr}, a quien en lo sucesivo se le denominará "EL FIADO"; ${data.guarantors.length > 0 ? `Y POR OTRA PARTE: ${guarantorsStr}, a quienes se les denominará "LOS FIADORES SOLIDARIOS";` : ''} Los comparecientes me aseguran hallarse en el libre ejercicio de sus derechos civiles y que por el presente instrumento celebran <strong>CONTRATO DE CONTRAGARANTÍA</strong> contenido en las siguientes cláusulas: <strong>PRIMERA:</strong> Manifiesta "EL FIADO" que ha solicitado a la entidad AFIANZADORA FIDELIS, SOCIEDAD ANÓNIMA, la emisión de la(s) ${policiesStr}, a favor de ${decorateVariableHtml(data.beneficiaryName, mode)}. <strong>SEGUNDA:</strong> Por el presente acto, "EL FIADO" y "LOS FIADORES SOLIDARIOS" se constituyen en fiadores solidarios y mancomunados de AFIANZADORA FIDELIS, SOCIEDAD ANÓNIMA, por todas las sumas que ésta llegare a pagar en concepto de la(s) póliza(s) identificada(s) en la cláusula anterior... [RESTO DEL TEXTO LEGAL DE ESCRITURA PÚBLICA]</p>
 
       <p>Yo, el Notario, DOY FE: a) De todo lo expuesto; b) De haber tenido a la vista los documentos de identificación relacionados; c) De que por designación de los comparecientes les leí lo escrito y bien enterados de su contenido, objeto, validez y efectos legales, lo ratifican, aceptan y firman.</p>
+
+      ${additionalTextHtml}
 
       <div style="margin-top: 80px;">
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
@@ -42,7 +54,7 @@ export const generateCounterGuaranteePublicHTML = (data: CounterGuaranteeData) =
               (name) => `
             <div style="text-align: center;">
               <div style="border-top: 1px solid black; width: 200px; margin: 0 auto 10px;"></div>
-              <p style="font-size: 10pt; margin: 0;">${name}</p>
+              <p style="font-size: 10pt; margin: 0;">${decorateVariableHtml(name, mode)}</p>
             </div>
           `,
             )
