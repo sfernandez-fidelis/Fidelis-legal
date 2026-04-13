@@ -236,9 +236,29 @@ function PreviewCanvas({
     onPreviewInsertionsChange(nextInsertions);
   };
 
+  const handleDocumentClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!canEditPreviewInsertions) {
+      return;
+    }
+
+    const target = event.target as HTMLElement | null;
+    const editableBlock = target?.closest<HTMLElement>('[data-editable-block="true"]');
+    if (!editableBlock) {
+      return;
+    }
+
+    focusEditableBlock(editableBlock);
+  };
+
   return (
     <div className="relative mx-auto w-full max-w-[800px]">
-      <div className="flex flex-col" onBlurCapture={emitInsertions} ref={contentRef} style={{ gap: `${PREVIEW_PAGE_GAP}px` }}>
+      <div
+        className="flex flex-col"
+        onBlurCapture={emitInsertions}
+        onClickCapture={handleDocumentClick}
+        ref={contentRef}
+        style={{ gap: `${PREVIEW_PAGE_GAP}px` }}
+      >
         {pages.map((pageBlocks, index) => (
           <div className="relative" key={`page-${index + 1}`}>
             <article
@@ -251,16 +271,9 @@ function PreviewCanvas({
 
               <div
                 className="preview-document relative z-[1] px-12 py-12 text-sm leading-relaxed text-gray-900"
+                dangerouslySetInnerHTML={{ __html: pageBlocks.join('') }}
                 style={{ fontFamily: '"Times New Roman", serif' }}
-              >
-                {pageBlocks.map((blockHtml, blockIndex) => (
-                  <div
-                    className="contents"
-                    dangerouslySetInnerHTML={{ __html: blockHtml }}
-                    key={`page-${index + 1}-block-${blockIndex}`}
-                  />
-                ))}
-              </div>
+              />
             </article>
 
             {index < pages.length - 1 ? (
@@ -298,4 +311,23 @@ function normalizeEditableText(block: HTMLElement) {
     .replace(/\n[ \t]+/g, '\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
+}
+
+function focusEditableBlock(block: HTMLElement) {
+  block.focus();
+
+  const selection = window.getSelection();
+  if (!selection) {
+    return;
+  }
+
+  if (selection.rangeCount > 0 && block.contains(selection.anchorNode)) {
+    return;
+  }
+
+  const range = document.createRange();
+  range.selectNodeContents(block);
+  range.collapse(false);
+  selection.removeAllRanges();
+  selection.addRange(range);
 }

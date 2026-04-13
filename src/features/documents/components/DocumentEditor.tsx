@@ -107,8 +107,8 @@ export function DocumentEditor({
   const addSignature = () => updateData({ ...data, signatureNames: [...data.signatureNames, ''] });
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(360px,0.8fr)]">
-      <section className="overflow-hidden rounded-[28px] border border-stone-200 bg-white shadow-sm">
+    <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(360px,0.8fr)]">
+      <section className="min-w-0 overflow-hidden rounded-[28px] border border-stone-200 bg-white shadow-sm">
         <div className="border-b border-stone-200 bg-stone-50 px-6 py-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -409,7 +409,7 @@ export function DocumentEditor({
         </div>
       </section>
 
-      <aside className="space-y-6">
+      <aside className="min-w-0 space-y-6">
         <div className="rounded-[28px] border border-stone-200 bg-white p-5 shadow-sm">
           <h2 className="text-lg font-medium text-stone-900">Acciones de flujo de trabajo</h2>
           <div className="mt-4 grid gap-3">

@@ -76,7 +76,7 @@ export function DocumentDetailPage() {
   };
 
   return (
-    <div className="mx-auto max-w-7xl space-y-8">
+    <div className="mx-auto max-w-7xl min-w-0 space-y-8">
       <header className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-3">
@@ -154,8 +154,8 @@ export function DocumentDetailPage() {
       {!permissions.canEditContent ? <PermissionNotice message="El acceso de visor es solo lectura. Las acciones de generación, impresión, edición y archivado están ocultas." /> : null}
 
       <div className="space-y-4">
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_380px]">
-          <section className="space-y-6">
+        <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1.2fr)_380px]">
+          <section className="min-w-0 space-y-6">
                 <div className="grid gap-4 md:grid-cols-3">
                   <Card label="Fiado" value={document.principal.entityName || document.principal.name || 'No capturado'} />
                   <Card label="Tipo de documento" value={getDocumentTypeLabel(document.type)} />
@@ -199,7 +199,7 @@ export function DocumentDetailPage() {
                 </div>
           </section>
 
-          <aside className="space-y-6">
+          <aside className="min-w-0 space-y-6">
             <div className="rounded-[28px] border border-stone-200 bg-white p-6 shadow-sm">
               <h2 className="text-lg font-medium text-stone-900">Acciones</h2>
               <div className="mt-4 grid gap-3">

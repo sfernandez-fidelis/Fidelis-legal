@@ -27,9 +27,9 @@ export function AppShell() {
   ].filter((item) => item.visible);
 
   return (
-    <div className="min-h-screen bg-[#FDFCFB] text-gray-900">
+    <div className="min-h-screen overflow-x-clip bg-[#FDFCFB] text-gray-900">
       <div className="flex min-h-screen">
-        <aside className="sticky top-0 hidden h-screen w-72 flex-col border-r border-gray-100 bg-white lg:flex">
+        <aside className="sticky top-0 z-30 hidden h-screen w-72 shrink-0 flex-col border-r border-gray-100 bg-white lg:flex">
           <div className="p-8">
             <p className="text-2xl font-serif italic">Fidelis Legal</p>
             <p className="mt-2 text-xs uppercase tracking-[0.3em] text-gray-400">Plataforma Legal</p>
@@ -83,8 +83,8 @@ export function AppShell() {
           </div>
         </aside>
 
-        <div className="flex min-h-screen flex-1 flex-col">
-          <header className="sticky top-0 z-10 border-b border-gray-100 bg-[#FDFCFB]/95 px-6 py-5 backdrop-blur lg:px-10">
+        <div className="flex min-h-screen min-w-0 flex-1 flex-col">
+          <header className="sticky top-0 z-20 border-b border-gray-100 bg-[#FDFCFB]/95 px-6 py-5 backdrop-blur lg:px-10">
             <div className="flex items-center justify-between gap-4">
               <div className="space-y-2">
                 <p className="text-xs font-semibold uppercase tracking-[0.3em] text-gray-400">Fidelis Legal</p>
@@ -96,7 +96,7 @@ export function AppShell() {
             </div>
           </header>
 
-          <main className="flex-1 px-6 py-8 lg:px-10">
+          <main className="min-w-0 flex-1 overflow-x-hidden px-6 py-8 lg:px-10">
             <Outlet />
           </main>
         </div>

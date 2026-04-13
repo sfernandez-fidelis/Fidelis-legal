@@ -182,7 +182,7 @@ export function DocumentsPage() {
   const totalPages = Math.max(1, Math.ceil((documentsQuery.data?.total ?? 0) / (documentsQuery.data?.pageSize ?? DEFAULT_PAGE_SIZE)));
 
   return (
-    <div className="mx-auto max-w-7xl space-y-8">
+    <div className="mx-auto max-w-7xl min-w-0 space-y-8">
       <header className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.3em] text-stone-400">Módulo de documentos</p>
