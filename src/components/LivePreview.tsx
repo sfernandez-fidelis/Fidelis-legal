@@ -254,28 +254,12 @@ function PreviewCanvas({
     focusEditableBlock(editableBlock);
   };
 
-  const handleDocumentMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (!canEditPreviewInsertions) {
-      return;
-    }
-
-    const target = event.target as HTMLElement | null;
-    const editableBlock = target?.closest<HTMLElement>('[data-editable-block="true"]');
-    if (!editableBlock) {
-      return;
-    }
-
-    event.preventDefault();
-    focusEditableBlock(editableBlock);
-  };
-
   return (
     <div className="relative mx-auto w-full max-w-[800px]">
       <div
         className="flex flex-col"
         onBlurCapture={emitInsertions}
         onClickCapture={handleDocumentClick}
-        onMouseDownCapture={handleDocumentMouseDown}
         ref={contentRef}
         style={{ gap: `${PREVIEW_PAGE_GAP}px` }}
       >
