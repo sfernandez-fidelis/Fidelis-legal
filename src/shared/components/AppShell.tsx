@@ -1,11 +1,12 @@
 import { ClipboardList, FileText, LayoutDashboard, LogOut, Settings, Shield, Users } from 'lucide-react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useLogout } from '../../features/auth/hooks/useLogout';
 import { usePermissions } from '../../features/auth/hooks/usePermissions';
 import { useAppSession, useCurrentUser } from '../../features/auth/hooks/useSessionQuery';
 import { Breadcrumbs } from './Breadcrumbs';
 
 export function AppShell() {
+  const location = useLocation();
   const session = useAppSession();
   const user = useCurrentUser();
   const permissions = usePermissions();
@@ -97,7 +98,9 @@ export function AppShell() {
           </header>
 
           <main className="min-w-0 flex-1 overflow-x-hidden px-6 py-8 lg:px-10">
-            <Outlet />
+            <div key={`${location.pathname}${location.search}`} className="min-w-0">
+              <Outlet />
+            </div>
           </main>
         </div>
       </div>

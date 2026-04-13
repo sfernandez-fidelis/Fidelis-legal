@@ -22,6 +22,7 @@ describe('LivePreview', () => {
     const slot = container.querySelector<HTMLElement>('[data-insertion-anchor="slot-1"]');
     expect(slot).not.toBeNull();
     expect(slot).toHaveTextContent('PRIMERA: Documento base');
+    expect(slot).toHaveAttribute('contenteditable', 'true');
 
     slot!.innerHTML = 'PRIMERA: Nota breve';
     fireEvent.blur(slot!);

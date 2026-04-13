@@ -146,9 +146,12 @@ function normalizeBlockText(block: HTMLElement) {
 function applyPreviewOverride(block: HTMLElement, anchorId: string, text?: string) {
   const originalText = normalizeBlockText(block);
 
+  block.setAttribute('contenteditable', 'true');
   block.setAttribute('data-editable-block', 'true');
   block.setAttribute('data-insertion-anchor', anchorId);
   block.setAttribute('data-original-text', originalText);
+  block.setAttribute('spellcheck', 'false');
+  block.setAttribute('tabindex', '0');
   block.classList.add('preview-editable-block');
 
   if (text !== undefined) {
@@ -166,6 +169,7 @@ function createExportOverrideBlock(block: HTMLElement, text: string) {
   next.removeAttribute('data-editable-block');
   next.removeAttribute('data-insertion-anchor');
   next.removeAttribute('data-original-text');
+  next.removeAttribute('spellcheck');
   next.removeAttribute('tabindex');
   next.classList.remove('preview-editable-block');
 
