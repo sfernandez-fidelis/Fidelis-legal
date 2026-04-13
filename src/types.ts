@@ -58,6 +58,7 @@ export interface Policy {
 export interface DocumentPreviewInsertion {
   anchorId: string;
   text: string;
+  preserveEmpty?: boolean;
 }
 
 export interface CounterGuaranteeData {

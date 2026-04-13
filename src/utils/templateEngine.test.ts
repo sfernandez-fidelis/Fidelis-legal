@@ -98,9 +98,10 @@ describe('compileTemplate', () => {
 
     expect(html).toContain('preview-variable-highlight');
     expect(html).toContain('data-insertion-anchor="slot-1"');
+    expect(html).toContain('data-editable-block="true"');
   });
 
-  it('exports manual insertions without preview styling', () => {
+  it('exports inline paragraph overrides without preview styling', () => {
     const html = compileTemplate(
       '<p>PRIMERA: Documento base</p>',
       createDocument({
@@ -108,8 +109,20 @@ describe('compileTemplate', () => {
       }),
     );
 
-    expect(html).toContain('Texto manual especial');
-    expect(html).not.toContain('preview-inline-slot');
+    expect(html).toContain('<p>Texto manual especial</p>');
+    expect(html).not.toContain('preview-editable-block');
     expect(html).not.toContain('preview-variable-highlight');
+  });
+
+  it('preserves empty inline overrides when a paragraph is cleared', () => {
+    const html = compileTemplate(
+      '<p>PRIMERA: Documento base</p>',
+      createDocument({
+        previewInsertions: [{ anchorId: 'slot-1', text: '', preserveEmpty: true }],
+      }),
+    );
+
+    expect(html).toContain('<p></p>');
+    expect(html).not.toContain('PRIMERA: Documento base');
   });
 });

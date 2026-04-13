@@ -13,6 +13,8 @@ interface LivePreviewProps {
 }
 
 const PREVIEW_PAGE_HEIGHT = 1128;
+const PREVIEW_PAGE_GAP = 72;
+const PREVIEW_PAGE_CONTENT_HEIGHT = PREVIEW_PAGE_HEIGHT - 96;
 
 export default function LivePreview({
   canEditPreviewInsertions = false,
@@ -49,7 +51,7 @@ export default function LivePreview({
     return (
       <div className="flex h-full flex-col items-center justify-center space-y-4 p-8 text-center text-gray-400">
         <p>No hay una plantilla definida para este tipo de contrato.</p>
-        <p className="text-sm">Vaya a la sección de Plantillas para crear una.</p>
+        <p className="text-sm">Vaya a la seccion de Plantillas para crear una.</p>
       </div>
     );
   }
@@ -64,13 +66,13 @@ export default function LivePreview({
               Vista previa editable
             </h3>
             <p className="mt-1 text-xs text-gray-500">
-              Lo amarillo viene de variables o texto manual. En PDF y Word se exporta limpio, sin resaltado.
+              Lo amarillo viene de variables. Haga clic sobre cualquier parrafo para ajustar el texto.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700">
               <PencilLine size={14} />
-              Escriba directamente entre cláusulas
+              Edicion directa dentro del documento
             </span>
             <button
               className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600 transition hover:bg-gray-100"
@@ -104,7 +106,7 @@ export default function LivePreview({
               <div>
                 <h3 className="text-base font-medium text-stone-900">Vista previa expandida</h3>
                 <p className="mt-1 text-sm text-stone-500">
-                  Edite dentro del documento y use el resaltado para ubicar rápido variables e inserciones manuales.
+                  Edite directamente dentro del documento y use el resaltado para ubicar rapido las variables.
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -151,7 +153,8 @@ function PreviewCanvas({
   onPreviewInsertionsChange?: (value: DocumentPreviewInsertion[]) => void;
 }) {
   const contentRef = useRef<HTMLDivElement | null>(null);
-  const [pageCount, setPageCount] = useState(1);
+  const measureRef = useRef<HTMLDivElement | null>(null);
+  const [pages, setPages] = useState<string[][]>([[]]);
 
   useEffect(() => {
     const node = contentRef.current;
@@ -159,22 +162,44 @@ function PreviewCanvas({
       return;
     }
 
-    const slots = Array.from(node.querySelectorAll<HTMLElement>('[data-insertion-anchor]'));
-    slots.forEach((slot) => {
-      slot.contentEditable = canEditPreviewInsertions ? 'true' : 'false';
-      slot.tabIndex = canEditPreviewInsertions ? 0 : -1;
+    const editableBlocks = Array.from(node.querySelectorAll<HTMLElement>('[data-editable-block="true"]'));
+    editableBlocks.forEach((block) => {
+      block.contentEditable = canEditPreviewInsertions ? 'true' : 'false';
+      block.tabIndex = canEditPreviewInsertions ? 0 : -1;
     });
-  }, [canEditPreviewInsertions, compiledHtml]);
+  }, [canEditPreviewInsertions, pages]);
 
   useEffect(() => {
-    const node = contentRef.current;
+    const node = measureRef.current;
     if (!node) {
       return;
     }
 
     const measure = () => {
-      const nextPageCount = Math.max(1, Math.ceil(node.scrollHeight / PREVIEW_PAGE_HEIGHT));
-      setPageCount(nextPageCount);
+      const topLevelBlocks = Array.from(node.children) as HTMLElement[];
+
+      if (!topLevelBlocks.length) {
+        setPages([[]]);
+        return;
+      }
+
+      const nextPages: string[][] = [[]];
+      let currentHeight = 0;
+
+      topLevelBlocks.forEach((block) => {
+        const blockHeight = Math.max(block.offsetHeight, 24);
+        const currentPage = nextPages[nextPages.length - 1];
+
+        if (currentPage.length > 0 && currentHeight + blockHeight > PREVIEW_PAGE_CONTENT_HEIGHT) {
+          nextPages.push([]);
+          currentHeight = 0;
+        }
+
+        nextPages[nextPages.length - 1].push(block.outerHTML);
+        currentHeight += blockHeight;
+      });
+
+      setPages(nextPages);
     };
 
     measure();
@@ -190,65 +215,87 @@ function PreviewCanvas({
       return;
     }
 
-    const nextInsertions = Array.from(contentRef.current.querySelectorAll<HTMLElement>('[data-insertion-anchor]'))
-      .map((slot) => ({
-        anchorId: slot.dataset.insertionAnchor ?? '',
-        text: normalizeEditableText(slot),
-      }))
-      .filter((item) => item.anchorId && item.text);
+    const nextInsertions: DocumentPreviewInsertion[] = [];
+
+    Array.from(contentRef.current.querySelectorAll<HTMLElement>('[data-editable-block="true"]')).forEach((block) => {
+      const anchorId = block.dataset.insertionAnchor ?? '';
+      const text = normalizeEditableText(block);
+      const originalText = (block.dataset.originalText ?? '').trim();
+
+      if (!anchorId || text === originalText) {
+        return;
+      }
+
+      nextInsertions.push({
+        anchorId,
+        ...(text.length === 0 ? { preserveEmpty: true } : {}),
+        text,
+      });
+    });
 
     onPreviewInsertionsChange(nextInsertions);
   };
 
   return (
-    <div className="mx-auto w-full max-w-[800px]">
-      <div className="relative" style={{ minHeight: `${pageCount * PREVIEW_PAGE_HEIGHT}px` }}>
-        {Array.from({ length: pageCount }, (_, index) => (
-          <div
-            className="pointer-events-none absolute left-3 right-3 rounded-[24px] border border-gray-200/80 bg-white shadow-md"
-            key={`page-surface-${index + 1}`}
-            style={{ height: `${PREVIEW_PAGE_HEIGHT}px`, top: `${index * PREVIEW_PAGE_HEIGHT}px` }}
-          />
-        ))}
+    <div className="relative mx-auto w-full max-w-[800px]">
+      <div className="flex flex-col" onBlurCapture={emitInsertions} ref={contentRef} style={{ gap: `${PREVIEW_PAGE_GAP}px` }}>
+        {pages.map((pageBlocks, index) => (
+          <div className="relative" key={`page-${index + 1}`}>
+            <article
+              className="relative min-h-[1128px] rounded-[28px] border border-stone-200/90 bg-white shadow-[0_22px_55px_-28px_rgba(15,23,42,0.38)]"
+              style={{ minHeight: `${PREVIEW_PAGE_HEIGHT}px` }}
+            >
+              <div className="pointer-events-none absolute right-6 top-5 z-10 rounded-full bg-stone-900 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.28em] text-white">
+                Pagina {index + 1}
+              </div>
 
-        {Array.from({ length: pageCount }, (_, index) => (
-          <div
-            className="pointer-events-none absolute right-6 z-10 rounded-full bg-stone-900 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.28em] text-white"
-            key={`page-badge-${index + 1}`}
-            style={{ top: `${index * PREVIEW_PAGE_HEIGHT + 18}px` }}
-          >
-            Página {index + 1}
+              <div
+                className="preview-document relative z-[1] px-12 py-12 text-sm leading-relaxed text-gray-900"
+                style={{ fontFamily: '"Times New Roman", serif' }}
+              >
+                {pageBlocks.map((blockHtml, blockIndex) => (
+                  <div
+                    className="contents"
+                    dangerouslySetInnerHTML={{ __html: blockHtml }}
+                    key={`page-${index + 1}-block-${blockIndex}`}
+                  />
+                ))}
+              </div>
+            </article>
+
+            {index < pages.length - 1 ? (
+              <div className="pointer-events-none absolute inset-x-10 -bottom-9 z-10 flex items-center gap-4">
+                <div className="h-px flex-1 bg-stone-300" />
+                <span className="rounded-full border border-stone-300 bg-stone-100 px-4 py-1 text-[10px] font-semibold uppercase tracking-[0.28em] text-stone-600 shadow-sm">
+                  Siguiente hoja
+                </span>
+                <div className="h-px flex-1 bg-stone-300" />
+              </div>
+            ) : null}
           </div>
         ))}
+      </div>
 
-        {Array.from({ length: Math.max(0, pageCount - 1) }, (_, index) => (
-          <div
-            className="pointer-events-none absolute inset-x-6 z-10 flex items-center gap-3"
-            key={`page-break-${index + 1}`}
-            style={{ top: `${(index + 1) * PREVIEW_PAGE_HEIGHT}px`, transform: 'translateY(-50%)' }}
-          >
-            <div className="h-px flex-1 bg-amber-300/90" />
-            <span className="rounded-full bg-amber-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.28em] text-amber-700 shadow-sm">
-              Salto de página
-            </span>
-            <div className="h-px flex-1 bg-amber-300/90" />
-          </div>
-        ))}
-
+      <div aria-hidden="true" className="pointer-events-none absolute -left-[99999px] top-0 w-full max-w-[800px] opacity-0">
         <div
-          className="relative z-[1] min-h-full px-12 py-12 text-sm leading-relaxed text-gray-900"
-          onBlurCapture={emitInsertions}
-          ref={contentRef}
-          style={{ fontFamily: '"Times New Roman", serif', minHeight: `${pageCount * PREVIEW_PAGE_HEIGHT}px` }}
+          className="preview-document px-12 py-12 text-sm leading-relaxed text-gray-900"
           dangerouslySetInnerHTML={{ __html: compiledHtml }}
+          ref={measureRef}
+          style={{ fontFamily: '"Times New Roman", serif' }}
         />
       </div>
     </div>
   );
 }
 
-function normalizeEditableText(slot: HTMLElement) {
-  const cloned = slot.cloneNode(true) as HTMLElement;
+function normalizeEditableText(block: HTMLElement) {
+  const cloned = block.cloneNode(true) as HTMLElement;
   cloned.querySelectorAll('br').forEach((node) => node.replaceWith('\n'));
-  return (cloned.textContent ?? '').replace(/\u00a0/g, ' ').trim();
+  return (cloned.textContent ?? '')
+    .replace(/\u00a0/g, ' ')
+    .replace(/\r/g, '')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n[ \t]+/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }

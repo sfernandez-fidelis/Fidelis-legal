@@ -2,9 +2,9 @@ import type { DocumentPreviewInsertion } from '../types';
 
 const ADDITIONAL_TEXT_TOKENS = ['{{TEXTO_ADICIONAL}}', '{{ADDITIONAL_TEXT}}'] as const;
 const CLAUSE_SPLIT_REGEX =
-  /(?=(?:PRIMERA|SEGUNDA|TERCERA|CUARTA|QUINTA|SEXTA|S[ÉE]PTIMA|OCTAVA|NOVENA|D[ÉE]CIMA|UND[ÉE]CIMA|DUOD[ÉE]CIMA|AUT[ÉE]NTICA):)/g;
+  /(?=(?:PRIMERA|SEGUNDA|TERCERA|CUARTA|QUINTA|SEXTA|S(?:E|\u00c9)PTIMA|OCTAVA|NOVENA|D(?:E|\u00c9)CIMA|UND(?:E|\u00c9)CIMA|DUOD(?:E|\u00c9)CIMA|AUT(?:E|\u00c9)NTICA):)/g;
 const CLAUSE_LABEL_REGEX =
-  /(?:PRIMERA|SEGUNDA|TERCERA|CUARTA|QUINTA|SEXTA|S[ÉE]PTIMA|OCTAVA|NOVENA|D[ÉE]CIMA|UND[ÉE]CIMA|DUOD[ÉE]CIMA|AUT[ÉE]NTICA):/i;
+  /(?:PRIMERA|SEGUNDA|TERCERA|CUARTA|QUINTA|SEXTA|S(?:E|\u00c9)PTIMA|OCTAVA|NOVENA|D(?:E|\u00c9)CIMA|UND(?:E|\u00c9)CIMA|DUOD(?:E|\u00c9)CIMA|AUT(?:E|\u00c9)NTICA):/i;
 
 export type TemplateRenderMode = 'preview' | 'export';
 
@@ -120,46 +120,61 @@ function splitCompoundParagraphs(root: HTMLElement) {
 }
 
 function buildInsertionMap(insertions: DocumentPreviewInsertion[] | undefined) {
-  return new Map((insertions ?? []).map((item) => [item.anchorId, item.text]));
+  return new Map(
+    (insertions ?? []).map((item) => [
+      item.anchorId,
+      {
+        preserveEmpty: Boolean(item.preserveEmpty),
+        text: item.text ?? '',
+      },
+    ]),
+  );
 }
 
-function createPreviewSlot(doc: Document, anchorId: string, text: string) {
-  const slot = doc.createElement('div');
-  slot.setAttribute('contenteditable', 'true');
-  slot.setAttribute('data-insertion-anchor', anchorId);
-  slot.setAttribute('data-placeholder', 'Escriba aquí...');
-  slot.className = 'preview-inline-slot';
-  slot.innerHTML = text ? escapeHtml(text).replace(/\n/g, '<br />') : '';
-  return slot;
+function normalizeBlockText(block: HTMLElement) {
+  const cloned = block.cloneNode(true) as HTMLElement;
+  cloned.querySelectorAll('br').forEach((node) => node.replaceWith('\n'));
+  return (cloned.textContent ?? '')
+    .replace(/\u00a0/g, ' ')
+    .replace(/\r/g, '')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n[ \t]+/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }
 
-function createExportInsertionNodes(doc: Document, text: string) {
-  const fragment = doc.createDocumentFragment();
-  const paragraphs = text
-    .split(/\n{2,}/)
-    .map((paragraph) => paragraph.trim())
-    .filter(Boolean);
+function applyPreviewOverride(block: HTMLElement, anchorId: string, text?: string) {
+  const originalText = normalizeBlockText(block);
 
-  paragraphs.forEach((paragraph) => {
-    const node = doc.createElement('p');
-    node.textContent = paragraph;
-    fragment.appendChild(node);
-  });
+  block.setAttribute('data-editable-block', 'true');
+  block.setAttribute('data-insertion-anchor', anchorId);
+  block.setAttribute('data-original-text', originalText);
+  block.classList.add('preview-editable-block');
 
-  return fragment;
+  if (text !== undefined) {
+    block.innerHTML = escapeHtml(text).replace(/\n/g, '<br />');
+  }
 }
 
 function shouldCreateAnchor(block: HTMLElement) {
-  const text = (block.textContent ?? '').trim();
-  if (!text) {
-    return false;
+  return Boolean((block.textContent ?? '').trim());
+}
+
+function createExportOverrideBlock(block: HTMLElement, text: string) {
+  const next = block.cloneNode(false) as HTMLElement;
+  next.removeAttribute('contenteditable');
+  next.removeAttribute('data-editable-block');
+  next.removeAttribute('data-insertion-anchor');
+  next.removeAttribute('data-original-text');
+  next.removeAttribute('tabindex');
+  next.classList.remove('preview-editable-block');
+
+  if (!next.className.trim()) {
+    next.removeAttribute('class');
   }
 
-  if (text.length >= 60) {
-    return true;
-  }
-
-  return CLAUSE_LABEL_REGEX.test(text);
+  next.innerHTML = text ? escapeHtml(text).replace(/\n/g, '<br />') : '';
+  return next;
 }
 
 export function injectPreviewInsertions(
@@ -184,18 +199,18 @@ export function injectPreviewInsertions(
 
   blocks.forEach((block, index) => {
     const anchorId = `slot-${index + 1}`;
-    const text = insertionMap.get(anchorId)?.trim() ?? '';
+    const override = insertionMap.get(anchorId);
 
     if (mode === 'preview') {
-      block.insertAdjacentElement('afterend', createPreviewSlot(doc, anchorId, text));
+      applyPreviewOverride(block, anchorId, override ? override.text : undefined);
       return;
     }
 
-    if (!text) {
+    if (!override) {
       return;
     }
 
-    block.after(createExportInsertionNodes(doc, text));
+    block.replaceWith(createExportOverrideBlock(block, override.preserveEmpty ? override.text : override.text.trim()));
   });
 
   return root.innerHTML;

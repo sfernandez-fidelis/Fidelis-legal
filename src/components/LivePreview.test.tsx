@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import LivePreview from './LivePreview';
@@ -21,12 +21,13 @@ describe('LivePreview', () => {
 
     const slot = container.querySelector<HTMLElement>('[data-insertion-anchor="slot-1"]');
     expect(slot).not.toBeNull();
+    expect(slot).toHaveTextContent('PRIMERA: Documento base');
 
-    await user.type(slot!, 'Nota breve');
-    slot!.blur();
+    slot!.innerHTML = 'PRIMERA: Nota breve';
+    fireEvent.blur(slot!);
     await user.click(screen.getByRole('button', { name: /expandir/i }));
 
-    expect(onPreviewInsertionsChange).toHaveBeenCalledWith([{ anchorId: 'slot-1', text: 'Nota breve' }]);
+    expect(onPreviewInsertionsChange).toHaveBeenCalledWith([{ anchorId: 'slot-1', text: 'PRIMERA: Nota breve' }]);
     expect(screen.getByRole('dialog', { name: /vista previa expandida/i })).toBeInTheDocument();
   });
 });
