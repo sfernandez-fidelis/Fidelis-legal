@@ -139,7 +139,7 @@ describe('authService', () => {
 
   it('reuses the existing organization when bootstrap hits a duplicate slug conflict', async () => {
     const user = {
-      id: 'user-1',
+      id: 'user-2',
       email: 'owner@example.com',
       user_metadata: { full_name: 'Workspace Owner' },
     };
