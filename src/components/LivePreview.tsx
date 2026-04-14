@@ -161,10 +161,6 @@ function PreviewCanvas({
   const [pages, setPages] = useState<string[][]>([[]]);
 
   useEffect(() => {
-    if (canEditPreviewInsertions) {
-      return;
-    }
-
     const node = contentRef.current;
     if (!node) {
       return;
@@ -174,6 +170,7 @@ function PreviewCanvas({
     editableBlocks.forEach((block) => {
       block.contentEditable = canEditPreviewInsertions ? 'true' : 'false';
       block.tabIndex = canEditPreviewInsertions ? 0 : -1;
+      block.spellcheck = false;
     });
   }, [canEditPreviewInsertions, pages]);
 

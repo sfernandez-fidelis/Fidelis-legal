@@ -10,6 +10,7 @@ import { formatDPI, formatDateInWords, formatNumberWithWords, getPartyIdentityNu
 import { generateCounterGuaranteePrivateHTML } from './pdf/templates/CounterGuaranteePrivateTemplate';
 import { generateCounterGuaranteePublicHTML } from './pdf/templates/CounterGuaranteePublicTemplate';
 import { generateMortgageGuaranteeHTML } from './pdf/templates/MortgageGuaranteeTemplate';
+import { getRenderableSignatureNames } from './signatureNames';
 
 function buildPartyTemplateString(party: PartyDetails, mode: TemplateRenderMode) {
   if (!party.name) {
@@ -30,6 +31,8 @@ function buildPartyTemplateString(party: PartyDetails, mode: TemplateRenderMode)
 }
 
 function buildSignaturesTemplate(signatureNames: string[], mode: TemplateRenderMode) {
+  const renderableSignatureNames = getRenderableSignatureNames(signatureNames);
+
   return `
     <div style="margin-top: 60px;">
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 40px;">
@@ -37,7 +40,7 @@ function buildSignaturesTemplate(signatureNames: string[], mode: TemplateRenderM
           <div style="border-top: 1px solid black; width: 200px; margin: 0 auto 10px;"></div>
           <p style="font-size: 9pt; margin: 0;">BRASIL HAROLDO ARENAS MORALES</p>
         </div>
-        ${signatureNames
+        ${renderableSignatureNames
           .map(
             (name) => `
           <div style="text-align: center;">

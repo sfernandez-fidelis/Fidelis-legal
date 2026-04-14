@@ -8,6 +8,7 @@ import {
   getPartyIdentityNumber,
   numberToWords,
 } from '../formatters';
+import { getRenderableSignatureNames } from '../../signatureNames';
 
 const getPartyLegalString = (party: PartyDetails, mode: TemplateRenderMode) => {
   const identityNumber = getPartyIdentityNumber(party);
@@ -28,6 +29,7 @@ export const generateCounterGuaranteePrivateHTML = (
   additionalTextHtml = '',
   mode: TemplateRenderMode = 'export',
 ) => {
+  const renderableSignatureNames = getRenderableSignatureNames(data.signatureNames);
   const principalStr = `a) ${getPartyLegalString(data.principal, mode)}`;
   const guarantorsStr = data.guarantors
     .map((guarantor, index) => `${String.fromCharCode(98 + index)}) ${getPartyLegalString(guarantor, mode)}`)
@@ -77,7 +79,7 @@ export const generateCounterGuaranteePrivateHTML = (
             <div style="border-top: 1px solid black; width: 200px; margin: 0 auto 10px;"></div>
             <p style="font-size: 9pt; margin: 0;">BRASIL HAROLDO ARENAS MORALES</p>
           </div>
-          ${data.signatureNames
+          ${renderableSignatureNames
             .map(
               (name) => `
             <div style="text-align: center;">
@@ -114,7 +116,7 @@ export const generateCounterGuaranteePrivateHTML = (
             <div style="border-top: 1px solid black; width: 200px; margin: 0 auto 10px;"></div>
             <p style="font-size: 9pt; margin: 0;">BRASIL HAROLDO ARENAS MORALES</p>
           </div>
-          ${data.signatureNames
+          ${renderableSignatureNames
             .map(
               (name) => `
             <div style="text-align: center;">

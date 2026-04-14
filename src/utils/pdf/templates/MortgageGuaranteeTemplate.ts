@@ -1,6 +1,7 @@
 import { CounterGuaranteeData, PartyDetails } from '../../../types';
 import { decorateVariableHtml, type TemplateRenderMode } from '../../documentAdditionalText';
 import { formatDPI, formatDateInWords, formatNumberWithWords, getPartyIdentityNumber } from '../formatters';
+import { getRenderableSignatureNames } from '../../signatureNames';
 
 const getPartyLegalString = (party: PartyDetails, mode: TemplateRenderMode) => {
   const base = `${party.name}, de ${party.age} años de edad, ${party.maritalStatus}, ${party.profession}, guatemalteco, de este domicilio, se identifica con el Documento Personal de Identificación con Código Único de Identificación número ${formatDPI(getPartyIdentityNumber(party))}`;
@@ -20,6 +21,7 @@ export const generateMortgageGuaranteeHTML = (
   additionalTextHtml = '',
   mode: TemplateRenderMode = 'export',
 ) => {
+  const renderableSignatureNames = getRenderableSignatureNames(data.signatureNames);
   const principalStr = getPartyLegalString(data.principal, mode);
   const dateStr = formatDateInWords(data.contractDate);
 
@@ -35,7 +37,7 @@ export const generateMortgageGuaranteeHTML = (
 
       <div style="margin-top: 80px;">
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
-          ${data.signatureNames
+          ${renderableSignatureNames
             .map(
               (name) => `
             <div style="text-align: center;">

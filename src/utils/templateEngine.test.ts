@@ -125,4 +125,27 @@ describe('compileTemplate', () => {
     expect(html).toContain('<p></p>');
     expect(html).not.toContain('PRIMERA: Documento base');
   });
+
+  it('omits blank signature placeholders from generated output', () => {
+    const html = compileTemplate(
+      '<p>Texto base</p>{{FIRMAS}}',
+      createDocument({
+        signatureNames: ['   ', 'Ana Principal', ''],
+      }),
+    );
+
+    expect((html.match(/border-top: 1px solid black/g) ?? []).length).toBe(2);
+    expect(html).toContain('ANA PRINCIPAL');
+  });
+
+  it('does not add extra signature lines in the default private template when names are blank', () => {
+    const html = compileTemplate(
+      '',
+      createDocument({
+        signatureNames: [' ', 'Ana Principal', ''],
+      }),
+    );
+
+    expect((html.match(/border-top: 1px solid black/g) ?? []).length).toBe(4);
+  });
 });
