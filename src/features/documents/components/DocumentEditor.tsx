@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import PartyForm from '../../../components/forms/PartyForm';
 import PolicyForm from '../../../components/forms/PolicyForm';
 import LivePreview from '../../../components/LivePreview';
+import { DateInput } from '../../../shared/components/DateInput';
 import type { ContactData, CounterGuaranteeData, ContractType, PartyDetails } from '../../../types';
 import { DocumentStatusBadge } from './DocumentStatusBadge';
 import { createEmptyParty } from '../../contacts/contactUtils';
@@ -30,7 +31,7 @@ interface DocumentEditorProps {
   onSaveContact?: (party: PartyDetails, role: 'principal' | 'guarantor') => Promise<void> | void;
 }
 
-const steps = ['Resumen', 'Partes', 'Políticas', 'Revisión final'] as const;
+const steps = ['Resumen', 'Partes', 'Pólizas', 'Revisión final'] as const;
 
 function buildInitialData(initialType: ContractType, initialData?: CounterGuaranteeData): CounterGuaranteeData {
   if (initialData) {
@@ -90,15 +91,12 @@ export function DocumentEditor({
     setData(buildInitialData(initialType, initialData));
   }, [initialData, initialType]);
 
-  useEffect(() => {
-    onChange(data);
-  }, [data, onChange]);
-
   const updateData = (nextData: CounterGuaranteeData) => {
     if (!permissions.canEditContent) {
       return;
     }
     setData(nextData);
+    onChange(nextData);
   };
 
   const addGuarantor = () => updateData({ ...data, guarantors: [...data.guarantors, createEmptyParty()] });
@@ -173,7 +171,9 @@ export function DocumentEditor({
                     : 'border-stone-200 bg-white text-stone-500 hover:border-stone-300'
                 }`}
                 key={item}
-                onClick={() => setStep(index)}
+                onClick={() => {
+                  setStep(index);
+                }}
                 type="button"
               >
                 <p className="text-xs uppercase tracking-[0.2em]">{String(index + 1).padStart(2, '0')}</p>
@@ -195,10 +195,9 @@ export function DocumentEditor({
                 />
               </Field>
               <Field label="Fecha del contrato">
-                <input
+                <DateInput
                   className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500"
-                  onChange={(event) => updateData({ ...data, contractDate: event.target.value })}
-                  type="date"
+                  onChange={(isoDate) => updateData({ ...data, contractDate: isoDate })}
                   value={data.contractDate}
                 />
               </Field>
@@ -251,7 +250,7 @@ export function DocumentEditor({
               {data.guarantors.map((guarantor, index) => (
                 <PartyForm
                   contacts={contacts}
-                  key={`${guarantor.name}-${index}`}
+                  key={`guarantor-${index}`}
                   onChange={(nextParty) => {
                     const guarantors = [...data.guarantors];
                     guarantors[index] = nextParty;
@@ -271,8 +270,8 @@ export function DocumentEditor({
             <div className="space-y-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-medium text-stone-900">Políticas</h3>
-                  <p className="text-sm text-stone-500">Cada política permanece consultable para búsqueda y reportes.</p>
+                  <h3 className="text-lg font-medium text-stone-900">Pólizas</h3>
+                  <p className="text-sm text-stone-500">Cada póliza permanece consultable para búsqueda y reportes.</p>
                 </div>
                 <button
                   className="rounded-full bg-brand-50 px-4 py-2 text-sm font-medium text-brand-700 transition hover:bg-brand-100"
@@ -282,14 +281,14 @@ export function DocumentEditor({
                 >
                   <span className="inline-flex items-center gap-2">
                     <Plus size={15} />
-                    Agregar política
+                    Agregar póliza
                   </span>
                 </button>
               </div>
               {data.policies.map((policy, index) => (
                 <PolicyForm
                   canRemove={data.policies.length > 1}
-                  key={`${policy.number}-${index}`}
+                  key={`policy-${index}`}
                   onChange={(nextPolicy) => {
                     const policies = [...data.policies];
                     policies[index] = nextPolicy;
@@ -309,7 +308,7 @@ export function DocumentEditor({
                 <p className="mt-1 text-sm text-stone-500">Finalice los firmantes y mueva el documento a su siguiente hito.</p>
                 <div className="mt-4 space-y-3">
                   {data.signatureNames.map((name, index) => (
-                    <div className="flex gap-3" key={`${name}-${index}`}>
+                    <div className="flex gap-3" key={`signature-${index}`}>
                       <input
                         className="w-full rounded-xl border border-stone-200 bg-white px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500"
                         onChange={(event) => {
@@ -349,7 +348,6 @@ export function DocumentEditor({
             </div>
           ) : null}
         </div>
-
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-stone-200 bg-stone-50 px-6 py-5">
           <button
             className="rounded-xl px-4 py-2 text-sm text-stone-600 transition hover:bg-white disabled:opacity-50"
@@ -397,7 +395,19 @@ export function DocumentEditor({
             <button
               className="rounded-xl bg-stone-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-black disabled:opacity-50"
               disabled={step === steps.length - 1}
-              onClick={() => setStep((current) => Math.min(steps.length - 1, current + 1))}
+              onClick={() => {
+                const nextStep = Math.min(steps.length - 1, step + 1);
+                setStep(nextStep);
+                if (nextStep === 3 && data.signatureNames.length === 1 && !data.signatureNames[0]) {
+                  const defaultSignatures = [
+                    data.principal.name,
+                    ...data.guarantors.map((g) => g.name),
+                  ].filter(Boolean);
+                  if (defaultSignatures.length > 0) {
+                    updateData({ ...data, signatureNames: defaultSignatures });
+                  }
+                }
+              }}
               type="button"
             >
               <span className="inline-flex items-center gap-2">

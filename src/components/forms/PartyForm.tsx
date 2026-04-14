@@ -4,6 +4,7 @@ import type { ContactData, ContactType, PartyDetails } from '../../types';
 import { useDebouncedValue } from '../../shared/hooks/useDebouncedValue';
 import { useContactSuggestions } from '../../features/contacts/hooks/useContactSuggestions';
 import { contactTypeLabels, normalizeText } from '../../features/contacts/contactUtils';
+import { DateInput } from '../../shared/components/DateInput';
 
 interface Props {
   party: PartyDetails;
@@ -367,11 +368,10 @@ export default function PartyForm({
             </div>
             <div className="md:col-span-2">
               <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-brand-700">Fecha del acta</label>
-              <input
+              <DateInput
                 className={`w-full rounded-lg border bg-white p-2.5 outline-none transition-all focus:border-transparent ${actaWarning ? 'border-amber-300 focus:ring-2 focus:ring-amber-500' : 'border-brand-200 focus:ring-2 focus:ring-brand-500'}`}
-                onChange={(event) => onChange({ ...party, actDate: event.target.value })}
-                type="date"
-                value={party.actDate}
+                onChange={(isoDate) => onChange({ ...party, actDate: isoDate })}
+                value={party.actDate || ''}
               />
               {actaWarning ? (
                 <p className="mt-1 flex items-center gap-1 text-xs text-amber-600">

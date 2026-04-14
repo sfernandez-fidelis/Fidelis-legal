@@ -98,7 +98,7 @@ export function AppShell() {
           </header>
 
           <main className="min-w-0 flex-1 overflow-x-hidden px-6 py-8 lg:px-10">
-            <div key={`${location.pathname}${location.search}`} className="min-w-0">
+            <div className="min-w-0">
               <Outlet />
             </div>
           </main>

@@ -9,10 +9,6 @@ export const documentGeneratorService = {
   }) {
     const { document, templateContent, kind } = options;
 
-    if (!document.id) {
-      throw new Error('Document id is required');
-    }
-
     const rendered =
       kind === 'pdf'
         ? await import('../../../utils/pdf/pdfGenerator').then((module) => module.renderContractPDF(document, templateContent))

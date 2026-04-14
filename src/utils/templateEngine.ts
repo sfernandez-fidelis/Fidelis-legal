@@ -45,7 +45,7 @@ function buildSignaturesTemplate(signatureNames: string[], mode: TemplateRenderM
             (name) => `
           <div style="text-align: center;">
             <div style="border-top: 1px solid black; width: 200px; margin: 0 auto 10px;"></div>
-            <p style="font-size: 9pt; margin: 0;">${decorateVariableHtml(name.toUpperCase(), mode)}</p>
+            <p style="font-size: 9pt; margin: 0 auto; width: 200px; text-align: center;">${decorateVariableHtml(name.toUpperCase(), mode)}</p>
           </div>
         `,
           )

@@ -5,6 +5,7 @@ import { ContactData, CounterGuaranteeData, ContractType, PartyDetails } from '.
 import PartyForm from './forms/PartyForm';
 import PolicyForm from './forms/PolicyForm';
 import LivePreview from './LivePreview';
+import { DateInput } from '../shared/components/DateInput';
 
 interface Props {
   onSave: (data: CounterGuaranteeData) => Promise<string | void> | void;
@@ -149,10 +150,9 @@ export default function CounterGuaranteeForm({
               <h3 className="border-b pb-2 text-lg font-medium">Datos generales y fiado</h3>
               <div className="mb-4">
                 <label className="mb-1 block text-sm font-medium text-gray-700">Fecha de contrato</label>
-                <input
+                <DateInput
                   className="w-full rounded-md border p-2 outline-none focus:ring-2 focus:ring-brand-500"
-                  onChange={(event) => setData({ ...data, contractDate: event.target.value })}
-                  type="date"
+                  onChange={(isoDate) => setData({ ...data, contractDate: isoDate })}
                   value={data.contractDate}
                 />
               </div>
@@ -186,7 +186,7 @@ export default function CounterGuaranteeForm({
               {data.guarantors.map((guarantor, index) => (
                 <PartyForm
                   contacts={contacts}
-                  key={`${guarantor.name}-${index}`}
+                  key={`guarantor-${index}`}
                   onChange={(updatedParty) => {
                     const nextGuarantors = [...data.guarantors];
                     nextGuarantors[index] = updatedParty;
@@ -218,7 +218,7 @@ export default function CounterGuaranteeForm({
                 {data.policies.map((policy, index) => (
                   <PolicyForm
                     canRemove={data.policies.length > 1}
-                    key={`${policy.number}-${index}`}
+                    key={`policy-${index}`}
                     onChange={(updatedPolicy) => {
                       const nextPolicies = [...data.policies];
                       nextPolicies[index] = updatedPolicy;
@@ -270,7 +270,7 @@ export default function CounterGuaranteeForm({
                     </button>
                   </div>
                   {data.signatureNames.map((name, index) => (
-                    <div className="flex gap-2" key={`${name}-${index}`}>
+                    <div className="flex gap-2" key={`signature-${index}`}>
                       <input
                         className="flex-1 rounded-md border p-2 text-sm"
                         onChange={(event) => {

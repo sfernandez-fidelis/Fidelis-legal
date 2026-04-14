@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 import { CounterGuaranteeData, ContractType } from '../../types';
 import { compileTemplate } from '../templateEngine';
 
@@ -45,6 +46,7 @@ export async function renderContractPDF(data: CounterGuaranteeData, customTempla
       width: 170,
       windowWidth: 800,
       autoPaging: 'text',
+      html2canvas: { scale: 2 },
     });
 
     const blob = doc.output('blob');

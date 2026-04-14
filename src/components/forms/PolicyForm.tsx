@@ -18,7 +18,10 @@ export default function PolicyForm({ policy, onChange, onRemove, canRemove }: Pr
           type="text"
           className="w-full p-2 border rounded-md bg-white"
           value={policy.number}
-          onChange={(e) => onChange({ ...policy, number: e.target.value })}
+          onChange={(e) => {
+            const value = e.target.value.replace(/\D/g, '');
+            onChange({ ...policy, number: value });
+          }}
         />
       </div>
       <div className="md:col-span-1">
@@ -38,6 +41,12 @@ export default function PolicyForm({ policy, onChange, onRemove, canRemove }: Pr
           className="w-full p-2 border rounded-md bg-white"
           value={policy.amount}
           onChange={(e) => onChange({ ...policy, amount: parseFloat(e.target.value) || 0 })}
+          onFocus={(e) => {
+            if (policy.amount === 0) e.target.value = '';
+          }}
+          onBlur={(e) => {
+            if (!e.target.value) onChange({ ...policy, amount: 0 });
+          }}
         />
       </div>
       <div className="flex justify-end md:col-span-1">
