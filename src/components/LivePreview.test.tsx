@@ -55,4 +55,25 @@ describe('LivePreview', () => {
 
     expect(mouseDownEvent.defaultPrevented).toBe(false);
   });
+
+  it('does not emit preview changes on blur when the content is unchanged', () => {
+    const onPreviewInsertionsChange = vi.fn();
+    const document = createDocument();
+    const { container } = render(
+      <LivePreview
+        canEditPreviewInsertions
+        data={document}
+        onPreviewInsertionsChange={onPreviewInsertionsChange}
+        templateContent="<p>PRIMERA: Documento base</p>"
+        type={document.type}
+      />,
+    );
+
+    const slot = container.querySelector<HTMLElement>('[data-insertion-anchor="slot-1"]');
+    expect(slot).not.toBeNull();
+
+    fireEvent.blur(slot!);
+
+    expect(onPreviewInsertionsChange).not.toHaveBeenCalled();
+  });
 });

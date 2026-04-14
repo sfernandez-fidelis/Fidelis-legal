@@ -90,6 +90,7 @@ export default function LivePreview({
             canEditPreviewInsertions={canEditPreviewInsertions}
             compiledHtml={compiledHtml}
             onPreviewInsertionsChange={onPreviewInsertionsChange}
+            previewInsertions={data.previewInsertions}
           />
         </div>
       </div>
@@ -134,6 +135,7 @@ export default function LivePreview({
                 canEditPreviewInsertions={canEditPreviewInsertions}
                 compiledHtml={compiledHtml}
                 onPreviewInsertionsChange={onPreviewInsertionsChange}
+                previewInsertions={data.previewInsertions}
               />
             </div>
           </div>
@@ -146,10 +148,12 @@ export default function LivePreview({
 function PreviewCanvas({
   canEditPreviewInsertions,
   compiledHtml,
+  previewInsertions,
   onPreviewInsertionsChange,
 }: {
   canEditPreviewInsertions: boolean;
   compiledHtml: string;
+  previewInsertions?: DocumentPreviewInsertion[];
   onPreviewInsertionsChange?: (value: DocumentPreviewInsertion[]) => void;
 }) {
   const contentRef = useRef<HTMLDivElement | null>(null);
@@ -214,11 +218,10 @@ function PreviewCanvas({
     return () => observer.disconnect();
   }, [compiledHtml]);
 
-  const emitInsertions = () => {
-    if (!contentRef.current || !onPreviewInsertionsChange) {
-      return;
+  const collectInsertions = () => {
+    if (!contentRef.current) {
+      return [] as DocumentPreviewInsertion[];
     }
-
     const nextInsertions: DocumentPreviewInsertion[] = [];
 
     Array.from(contentRef.current.querySelectorAll<HTMLElement>('[data-editable-block="true"]')).forEach((block) => {
@@ -237,29 +240,40 @@ function PreviewCanvas({
       });
     });
 
+    return nextInsertions;
+  };
+
+  const emitInsertions = () => {
+    if (!onPreviewInsertionsChange) {
+      return;
+    }
+
+    const nextInsertions = collectInsertions();
+    if (arePreviewInsertionsEqual(nextInsertions, previewInsertions ?? [])) {
+      return;
+    }
+
     onPreviewInsertionsChange(nextInsertions);
   };
 
-  const handleDocumentClick = (event: React.MouseEvent<HTMLDivElement>) => {
+  const handleDocumentBlur = (event: React.FocusEvent<HTMLDivElement>) => {
     if (!canEditPreviewInsertions) {
       return;
     }
 
-    const target = event.target as HTMLElement | null;
-    const editableBlock = target?.closest<HTMLElement>('[data-editable-block="true"]');
-    if (!editableBlock) {
+    const nextFocused = event.relatedTarget;
+    if (nextFocused instanceof Node && event.currentTarget.contains(nextFocused)) {
       return;
     }
 
-    focusEditableBlock(editableBlock);
+    emitInsertions();
   };
 
   return (
     <div className="relative mx-auto w-full max-w-[800px]">
       <div
         className="flex flex-col"
-        onBlurCapture={emitInsertions}
-        onClickCapture={handleDocumentClick}
+        onBlurCapture={handleDocumentBlur}
         ref={contentRef}
         style={{ gap: `${PREVIEW_PAGE_GAP}px` }}
       >
@@ -317,21 +331,18 @@ function normalizeEditableText(block: HTMLElement) {
     .trim();
 }
 
-function focusEditableBlock(block: HTMLElement) {
-  block.focus();
-
-  const selection = window.getSelection();
-  if (!selection) {
-    return;
+function arePreviewInsertionsEqual(left: DocumentPreviewInsertion[], right: DocumentPreviewInsertion[]) {
+  if (left.length !== right.length) {
+    return false;
   }
 
-  if (selection.rangeCount > 0 && block.contains(selection.anchorNode)) {
-    return;
-  }
-
-  const range = document.createRange();
-  range.selectNodeContents(block);
-  range.collapse(false);
-  selection.removeAllRanges();
-  selection.addRange(range);
+  return left.every((item, index) => {
+    const other = right[index];
+    return (
+      other &&
+      item.anchorId === other.anchorId &&
+      item.text === other.text &&
+      Boolean(item.preserveEmpty) === Boolean(other.preserveEmpty)
+    );
+  });
 }
