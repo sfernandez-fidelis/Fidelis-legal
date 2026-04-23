@@ -7,6 +7,7 @@ export enum ContractType {
 export interface PartyDetails {
   name: string;
   age: string;
+  birthDate?: string; // ISO yyyy-MM-dd; age is derived from this when present
   maritalStatus: string;
   profession: string;
   domicile: string;

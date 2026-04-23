@@ -1,4 +1,16 @@
-import { AlignmentType, Document, Packer, Paragraph, TextRun, type IRunOptions } from 'docx';
+import {
+  AlignmentType,
+  BorderStyle,
+  Document,
+  Packer,
+  Paragraph,
+  Table,
+  TableCell,
+  TableRow,
+  TextRun,
+  WidthType,
+  type IRunOptions,
+} from 'docx';
 import { CounterGuaranteeData, ContractType } from '../../types';
 import { compileTemplate } from '../templateEngine';
 
@@ -31,15 +43,105 @@ const parseHtmlNodeToTextRuns = (node: Node, inheritedStyles: Partial<IRunOption
     };
 
     Array.from(el.childNodes).forEach((child) => {
-      const childRuns = parseHtmlNodeToTextRuns(child, nextStyles);
-      childRuns.forEach((run) => {
-        runs.push(run);
-      });
+      parseHtmlNodeToTextRuns(child, nextStyles).forEach((run) => runs.push(run));
     });
   }
 
   return runs;
 };
+
+const BLOCK_TAGS = new Set(['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'LI']);
+
+function getAlignment(el: HTMLElement): (typeof AlignmentType)[keyof typeof AlignmentType] {
+  if (el.style.textAlign === 'center' || /^H[1-6]$/.test(el.tagName)) return AlignmentType.CENTER;
+  if (el.style.textAlign === 'right') return AlignmentType.END;
+  return AlignmentType.BOTH;
+}
+
+function elementToParagraph(el: HTMLElement, spacingAfter = 200): Paragraph | null {
+  const runs = parseHtmlNodeToTextRuns(el);
+  if (runs.length === 0) return null;
+  return new Paragraph({ alignment: getAlignment(el), spacing: { after: spacingAfter }, children: runs });
+}
+
+function processElement(el: HTMLElement): Array<Paragraph | Table> {
+  const tag = el.tagName.toUpperCase();
+
+  if (tag === 'TABLE') return [htmlTableToDocxTable(el)];
+
+  if (BLOCK_TAGS.has(tag)) {
+    const p = elementToParagraph(el);
+    return p ? [p] : [];
+  }
+
+  // div and other containers — recurse into direct children
+  const result: Array<Paragraph | Table> = [];
+  for (const child of Array.from(el.children)) {
+    result.push(...processElement(child as HTMLElement));
+  }
+  return result;
+}
+
+function htmlTableToDocxTable(tableEl: HTMLElement): Table {
+  const NO_BORDER = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+
+  const rows = Array.from(tableEl.querySelectorAll('tr')).map((trEl) => {
+    const cells = Array.from((trEl as HTMLElement).querySelectorAll('td, th')).map((tdEl) => {
+      const cell = tdEl as HTMLElement;
+
+      // Collect paragraphs from cell contents
+      const paragraphs: Paragraph[] = [];
+      for (const child of Array.from(cell.children)) {
+        const childEl = child as HTMLElement;
+        if (BLOCK_TAGS.has(childEl.tagName.toUpperCase())) {
+          const p = elementToParagraph(childEl, 100);
+          if (p) paragraphs.push(p);
+        } else {
+          // nested div / span — extract text directly
+          const runs = parseHtmlNodeToTextRuns(childEl);
+          if (runs.length > 0) {
+            paragraphs.push(new Paragraph({ alignment: getAlignment(cell), spacing: { after: 100 }, children: runs }));
+          }
+        }
+      }
+
+      // Fallback: direct text in cell
+      if (paragraphs.length === 0) {
+        const runs = parseHtmlNodeToTextRuns(cell);
+        if (runs.length > 0) {
+          paragraphs.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 100 }, children: runs }));
+        }
+      }
+
+      if (paragraphs.length === 0) paragraphs.push(new Paragraph({}));
+
+      // Apply top border when the cell carries one (used for signature lines)
+      const styleAttr = cell.getAttribute('style') ?? '';
+      const hasTopBorder = styleAttr.includes('border-top');
+      const topBorder = hasTopBorder
+        ? { style: BorderStyle.SINGLE, size: 6, color: '000000' }
+        : NO_BORDER;
+
+      return new TableCell({
+        children: paragraphs,
+        borders: { top: topBorder, bottom: NO_BORDER, left: NO_BORDER, right: NO_BORDER },
+      });
+    });
+
+    return new TableRow({ children: cells });
+  });
+
+  return new Table({
+    rows,
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: {
+      top: NO_BORDER,
+      bottom: NO_BORDER,
+      left: NO_BORDER,
+      right: NO_BORDER,
+    },
+  });
+}
 
 export function buildBaseFileName(data: CounterGuaranteeData) {
   const typeLabel =
@@ -58,42 +160,25 @@ export async function renderWordDocument(data: CounterGuaranteeData, customTempl
   const tempDiv = document.createElement('div');
   tempDiv.innerHTML = html;
 
-  const blockElements = Array.from(tempDiv.querySelectorAll('p, div, h1, h2, h3, h4, h5, h6, li'));
-  const paragraphsToProcess = blockElements.length > 0 ? (blockElements as HTMLElement[]) : [tempDiv];
+  const docChildren: Array<Paragraph | Table> = [];
+  for (const child of Array.from(tempDiv.children)) {
+    docChildren.push(...processElement(child as HTMLElement));
+  }
 
-  const docParagraphs = paragraphsToProcess
-    .map((el) => {
-      const runs = parseHtmlNodeToTextRuns(el);
-
-      let alignment: (typeof AlignmentType)[keyof typeof AlignmentType] = AlignmentType.BOTH;
-      if (el.style.textAlign === 'center' || el.tagName.match(/^H[1-6]$/)) {
-        alignment = AlignmentType.CENTER;
-      } else if (el.style.textAlign === 'right') {
-        alignment = AlignmentType.END;
-      }
-
-      return new Paragraph({
-        alignment,
-        spacing: { after: 200 },
-        children: runs,
-      });
-    })
-    .filter((_paragraph, index) => parseHtmlNodeToTextRuns(paragraphsToProcess[index]).length > 0);
+  // Ensure there is at least one paragraph (docx requires it)
+  if (docChildren.length === 0) {
+    docChildren.push(new Paragraph({}));
+  }
 
   const doc = new Document({
     sections: [
       {
         properties: {
           page: {
-            margin: {
-              top: 1440,
-              right: 1440,
-              bottom: 1440,
-              left: 1440,
-            },
+            margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 },
           },
         },
-        children: docParagraphs,
+        children: docChildren,
       },
     ],
   });

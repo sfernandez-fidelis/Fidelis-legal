@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { CheckCircle2, ChevronLeft, ChevronRight, Copy, FileText, FolderArchive, Plus, RotateCw, Save } from 'lucide-react';
+import { AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, Copy, FileText, FolderArchive, Loader2, Plus, RotateCw, Save } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import PartyForm from '../../../components/forms/PartyForm';
@@ -54,16 +54,29 @@ function buildInitialData(initialType: ContractType, initialData?: CounterGuaran
   };
 }
 
-function getSaveLabel(saveIndicator: SaveIndicatorState) {
-  switch (saveIndicator) {
-    case 'saving':
-      return 'Guardando...';
-    case 'saved':
-      return 'Guardado';
-    case 'unsaved':
-    default:
-      return 'Cambios sin guardar';
+function SaveIndicator({ state }: { state: SaveIndicatorState }) {
+  if (state === 'saving') {
+    return (
+      <span className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium text-stone-500">
+        <Loader2 size={14} className="animate-spin" />
+        Guardando...
+      </span>
+    );
   }
+  if (state === 'unsaved') {
+    return (
+      <span className="inline-flex items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700">
+        <AlertCircle size={14} />
+        Sin guardar
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-2 rounded-full border border-green-200 bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700">
+      <CheckCircle2 size={14} />
+      Guardado
+    </span>
+  );
 }
 
 export function DocumentEditor({
@@ -121,10 +134,7 @@ export function DocumentEditor({
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium text-stone-500">
-                <CheckCircle2 size={14} />
-                {getSaveLabel(saveIndicator)}
-              </span>
+              <SaveIndicator state={saveIndicator} />
               {permissions.canEditContent && data.id ? (
                 <button
                   className="rounded-xl border border-stone-200 px-3 py-2 text-sm text-stone-600 transition hover:bg-stone-50"

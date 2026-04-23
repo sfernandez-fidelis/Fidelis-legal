@@ -17,12 +17,13 @@ export function createEmptyParty(): PartyDetails {
   return {
     name: '',
     age: '',
+    birthDate: '',
     maritalStatus: 'casado',
     profession: 'Ejecutivo',
     domicile: 'departamento de Guatemala',
     idNumber: '',
     cui: '',
-    isRepresenting: true,
+    isRepresenting: false,
     role: 'ADMINISTRADOR UNICO Y REPRESENTANTE LEGAL',
     entityName: '',
     notaryName: '',
@@ -102,6 +103,7 @@ export function mergePartyDetails(existing: PartyDetails, incoming: PartyDetails
   return {
     name: incoming.name || existing.name,
     age: incoming.age || existing.age,
+    birthDate: incoming.birthDate || existing.birthDate,
     maritalStatus: incoming.maritalStatus || existing.maritalStatus,
     profession: incoming.profession || existing.profession,
     domicile: incoming.domicile || existing.domicile,

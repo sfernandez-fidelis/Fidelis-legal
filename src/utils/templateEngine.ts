@@ -12,13 +12,27 @@ import { generateCounterGuaranteePublicHTML } from './pdf/templates/CounterGuara
 import { generateMortgageGuaranteeHTML } from './pdf/templates/MortgageGuaranteeTemplate';
 import { getRenderableSignatureNames } from './signatureNames';
 
+function computeAgeFromBirthDate(birthDate: string): number {
+  const birth = new Date(birthDate);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  return age;
+}
+
+function getPartyAge(party: PartyDetails): string {
+  if (party.birthDate) return String(computeAgeFromBirthDate(party.birthDate));
+  return party.age || '[EDAD]';
+}
+
 function buildPartyTemplateString(party: PartyDetails, mode: TemplateRenderMode) {
   if (!party.name) {
     return '';
   }
 
   const identityNumber = getPartyIdentityNumber(party);
-  const base = `<b>${party.name}</b>, de ${party.age} años de edad, ${party.maritalStatus}, ${party.profession}, con domicilio en ${party.domicile}, se identifica con Documento Personal de Identificación (DPI) Código Único de Identificación (CUI) número ${formatDPI(identityNumber)} extendido por el Registro Nacional de las Personas de la República de Guatemala`;
+  const base = `<b>${party.name}</b>, de ${getPartyAge(party)} años de edad, ${party.maritalStatus}, ${party.profession}, con domicilio en ${party.domicile}, se identifica con Documento Personal de Identificación (DPI) Código Único de Identificación (CUI) número ${formatDPI(identityNumber)} extendido por el Registro Nacional de las Personas de la República de Guatemala`;
 
   if (!party.isRepresenting) {
     return decorateVariableHtml(base, mode);
@@ -32,25 +46,25 @@ function buildPartyTemplateString(party: PartyDetails, mode: TemplateRenderMode)
 
 function buildSignaturesTemplate(signatureNames: string[], mode: TemplateRenderMode) {
   const renderableSignatureNames = getRenderableSignatureNames(signatureNames);
+  const allSigners = [
+    'BRASIL HAROLDO ARENAS MORALES',
+    ...renderableSignatureNames.map((name) => decorateVariableHtml(name.toUpperCase(), mode)),
+  ];
+
+  const cellsHtml = allSigners
+    .map(
+      (name) => `
+      <td style="text-align: center; padding: 10px 20px 0; border-top: 2px solid #000; vertical-align: top;">
+        <p style="font-size: 9pt; margin: 0;">${name}</p>
+      </td>`,
+    )
+    .join('');
 
   return `
     <div style="margin-top: 60px;">
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 40px;">
-        <div style="text-align: center;">
-          <div style="border-top: 1px solid black; width: 200px; margin: 0 auto 10px;"></div>
-          <p style="font-size: 9pt; margin: 0;">BRASIL HAROLDO ARENAS MORALES</p>
-        </div>
-        ${renderableSignatureNames
-          .map(
-            (name) => `
-          <div style="text-align: center;">
-            <div style="border-top: 1px solid black; width: 200px; margin: 0 auto 10px;"></div>
-            <p style="font-size: 9pt; margin: 0 auto; width: 200px; text-align: center;">${decorateVariableHtml(name.toUpperCase(), mode)}</p>
-          </div>
-        `,
-          )
-          .join('')}
-      </div>
+      <table style="width: 100%; border-collapse: collapse; margin-top: 40px;">
+        <tr>${cellsHtml}</tr>
+      </table>
     </div>
   `;
 }

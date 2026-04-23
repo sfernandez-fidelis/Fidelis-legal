@@ -6,6 +6,15 @@ import { useContactSuggestions } from '../../features/contacts/hooks/useContactS
 import { contactTypeLabels, normalizeText } from '../../features/contacts/contactUtils';
 import { DateInput } from '../../shared/components/DateInput';
 
+function computeAgeYears(birthDateIso: string): number {
+  const birth = new Date(birthDateIso);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  return age;
+}
+
 interface Props {
   party: PartyDetails;
   onChange: (updated: PartyDetails) => void;
@@ -157,8 +166,8 @@ export default function PartyForm({
             </button>
           ) : null}
           <label className="group flex cursor-pointer items-center gap-2">
-            <div className={`relative h-5 w-10 rounded-full transition-colors ${party.isRepresenting ? 'bg-brand-600' : 'bg-gray-200'}`}>
-              <div className={`absolute top-1 h-3 w-3 rounded-full bg-white transition-transform ${party.isRepresenting ? 'left-6' : 'left-1'}`} />
+            <div className={`relative h-5 w-10 flex-shrink-0 rounded-full transition-colors ${party.isRepresenting ? 'bg-brand-600' : 'bg-gray-200'}`}>
+              <div className={`absolute top-1 h-3 w-3 rounded-full bg-white shadow transition-all ${party.isRepresenting ? 'left-6' : 'left-1'}`} />
             </div>
             <input
               checked={party.isRepresenting}
@@ -166,8 +175,8 @@ export default function PartyForm({
               onChange={(event) => onChange({ ...party, isRepresenting: event.target.checked })}
               type="checkbox"
             />
-            <span className="text-xs font-medium text-gray-600 transition-colors group-hover:text-brand-600">
-              Representa a una entidad
+            <span className={`text-xs font-medium transition-colors group-hover:text-brand-600 ${party.isRepresenting ? 'text-brand-700' : 'text-gray-500'}`}>
+              {party.isRepresenting ? 'Representa a una entidad' : 'No representa una entidad'}
             </span>
           </label>
           {onRemove ? (
@@ -273,13 +282,15 @@ export default function PartyForm({
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-gray-500">Edad</label>
-          <input
+          <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-gray-500">Fecha de nacimiento</label>
+          <DateInput
             className="w-full rounded-lg border border-gray-200 bg-gray-50 p-2.5 outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-brand-500"
-            onChange={(event) => onChange({ ...party, age: event.target.value })}
-            type="number"
-            value={party.age}
+            onChange={(isoDate) => onChange({ ...party, birthDate: isoDate })}
+            value={party.birthDate || ''}
           />
+          {party.birthDate ? (
+            <p className="mt-1 text-xs text-gray-400">{computeAgeYears(party.birthDate)} años</p>
+          ) : null}
         </div>
         <div>
           <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-gray-500">Estado civil</label>
