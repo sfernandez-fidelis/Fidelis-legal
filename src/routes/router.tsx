@@ -4,6 +4,7 @@ import { RequireAuth } from '../features/auth/components/RequireAuth';
 import { RouteErrorBoundary } from '../shared/components/RouteErrorBoundary';
 import { AppShell } from '../shared/components/AppShell';
 import { PageLoader } from '../shared/components/PageLoader';
+import { useAppSession } from '../features/auth/hooks/useSessionQuery';
 
 function lazyPage<TModule extends Record<string, any>, TKey extends keyof TModule>(
   loader: () => Promise<TModule>,
@@ -36,6 +37,17 @@ const contactEditPage = lazyPage(() => import('../features/contacts/pages/Contac
 const teamPage = lazyPage(() => import('../features/team/pages/TeamPage'), 'TeamPage');
 const auditLogPage = lazyPage(() => import('../features/team/pages/AuditLogPage'), 'AuditLogPage');
 const settingsPage = lazyPage(() => import('./SettingsPage'), 'SettingsPage');
+const archivoReviewPage = lazyPage(() => import('../features/reviews/pages/ArchivoReviewPage'), 'ArchivoReviewPage');
+const legalReviewPage = lazyPage(() => import('../features/reviews/pages/LegalReviewPage'), 'LegalReviewPage');
+
+function DefaultRedirect() {
+  const session = useAppSession();
+  const department = (session?.user?.user_metadata?.department as string) || 'general';
+  
+  if (department === 'archivo') return <Navigate replace to="/reviews/archivo" />;
+  if (department === 'legal') return <Navigate replace to="/reviews/legal" />;
+  return <Navigate replace to="/dashboard" />;
+}
 
 export const router = createBrowserRouter([
   {
@@ -52,7 +64,7 @@ export const router = createBrowserRouter([
       {
         element: <AppShell />,
         children: [
-          { index: true, element: <Navigate replace to="/dashboard" /> },
+          { index: true, element: <DefaultRedirect /> },
           {
             path: 'dashboard',
             element: dashboardPage,
@@ -95,6 +107,14 @@ export const router = createBrowserRouter([
             path: 'audit-log',
             element: auditLogPage,
             handle: { breadcrumb: 'Auditoría' },
+          },
+          {
+            path: 'reviews',
+            handle: { breadcrumb: 'Revisiones' },
+            children: [
+              { path: 'archivo', element: archivoReviewPage, handle: { breadcrumb: 'Rechazar Contragarantía' } },
+              { path: 'legal', element: legalReviewPage, handle: { breadcrumb: 'Contragarantías Rechazadas' } },
+            ],
           },
           {
             path: 'settings',

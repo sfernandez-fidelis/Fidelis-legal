@@ -1,30 +1,41 @@
-import { ClipboardList, FileText, LayoutDashboard, LogOut, Settings, Shield, Users } from 'lucide-react';
+import { AlertTriangle, ClipboardList, FileCheck, FileText, LayoutDashboard, LogOut, Settings, Shield, Users } from 'lucide-react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useLogout } from '../../features/auth/hooks/useLogout';
 import { usePermissions } from '../../features/auth/hooks/usePermissions';
 import { useAppSession, useCurrentUser } from '../../features/auth/hooks/useSessionQuery';
 import { Breadcrumbs } from './Breadcrumbs';
+import { usePendingReviewCount } from '../../features/reviews/hooks/useReviewsQuery';
 
 export function AppShell() {
   const location = useLocation();
   const session = useAppSession();
   const user = useCurrentUser();
   const permissions = usePermissions();
+  const pendingReviewCount = usePendingReviewCount();
   const logout = useLogout();
   const userName =
     user?.user_metadata?.full_name ||
     user?.user_metadata?.name ||
     user?.email?.split('@')[0] ||
     'Usuario';
+
   const userAvatar = user?.user_metadata?.avatar_url || '';
+  const department = (user?.user_metadata?.department as string) || 'general';
+
+  const isArchivo = department === 'archivo';
+  const isLegal = department === 'legal';
+  const isGeneral = !isArchivo && !isLegal;
+
   const navigationItems = [
-    { to: '/dashboard', label: 'Inicio', icon: LayoutDashboard, visible: true },
-    { to: '/documents', label: 'Documentos', icon: FileText, visible: true },
-    { to: '/templates', label: 'Plantillas', icon: FileText, visible: true },
-    { to: '/contacts', label: 'Contactos', icon: Users, visible: true },
-    { to: '/team', label: 'Equipo', icon: Shield, visible: permissions.canManageOrganization },
-    { to: '/audit-log', label: 'Auditoría', icon: ClipboardList, visible: permissions.canViewAuditLog },
-    { to: '/settings', label: 'Configuración', icon: Settings, visible: permissions.canManageOrganization },
+    { to: '/dashboard', label: 'Inicio', icon: LayoutDashboard, visible: isGeneral },
+    { to: '/documents', label: 'Documentos', icon: FileText, visible: isGeneral },
+    { to: '/templates', label: 'Plantillas', icon: FileText, visible: isGeneral },
+    { to: '/contacts', label: 'Contactos', icon: Users, visible: isGeneral },
+    { to: '/reviews/archivo', label: 'Rechazar Contragarantía', icon: AlertTriangle, visible: isArchivo || (permissions.canEditContent && isGeneral) },
+    { to: '/reviews/legal', label: 'Contragarantías rechazadas', icon: FileCheck, visible: isLegal || (permissions.canEditContent && isGeneral), badge: pendingReviewCount.data },
+    { to: '/team', label: 'Equipo', icon: Shield, visible: permissions.canManageOrganization && isGeneral },
+    { to: '/audit-log', label: 'Auditoría', icon: ClipboardList, visible: permissions.canViewAuditLog && isGeneral },
+    { to: '/settings', label: 'Configuración', icon: Settings, visible: permissions.canManageOrganization && isGeneral },
   ].filter((item) => item.visible);
 
   return (
@@ -53,6 +64,11 @@ export function AppShell() {
                 >
                   <Icon size={18} />
                   {item.label}
+                  {(item as any).badge > 0 && (
+                    <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-white">
+                      {(item as any).badge}
+                    </span>
+                  )}
                 </NavLink>
               );
             })}

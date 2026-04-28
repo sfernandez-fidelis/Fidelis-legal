@@ -141,11 +141,11 @@ async function buildAppSession(user: User): Promise<AppSession> {
     ]);
 
   try {
-    console.log('[AuthService] Step 1: Ensuring profile...');
-    const profile = await withTimeout(ensureProfile(user), 'ensureProfile');
-    
-    console.log('[AuthService] Step 2: Checking invitations...');
-    await withTimeout(acceptPendingInvitations(user), 'acceptPendingInvitations');
+    console.log('[AuthService] Steps 1 & 2: Ensuring profile and checking invitations concurrently...');
+    const [profile] = await Promise.all([
+      withTimeout(ensureProfile(user), 'ensureProfile'),
+      withTimeout(acceptPendingInvitations(user), 'acceptPendingInvitations'),
+    ]);
     
     console.log('[AuthService] Step 3: Fetching membership...');
     let membership = await withTimeout(fetchMembership(user.id), 'fetchMembership');
