@@ -17,7 +17,6 @@ export function useReviewsQuery(statusFilter?: ReviewStatus | 'all') {
     queryKey: REVIEW_KEYS.list(orgId, statusFilter),
     queryFn: () => reviewService.listReviews(orgId, statusFilter),
     enabled: Boolean(orgId),
-    refetchInterval: 30_000, // Poll every 30s for real-time feel
   });
 }
 
@@ -29,7 +28,6 @@ export function usePendingReviewCount() {
     queryKey: REVIEW_KEYS.pendingCount(orgId),
     queryFn: () => reviewService.getPendingCount(orgId),
     enabled: Boolean(orgId),
-    refetchInterval: 15_000, // Check for new reviews every 15s
   });
 }
 

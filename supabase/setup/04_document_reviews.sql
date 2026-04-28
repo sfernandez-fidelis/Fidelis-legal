@@ -127,3 +127,10 @@ with check (
   bucket_id = 'review-files'
   and app.has_org_role((storage.foldername(name))[1]::uuid, 'editor')
 );
+
+-- Grant privileges explicitly to avoid 403 errors
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.document_reviews TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.document_reviews TO service_role;
+
+-- Force PostgREST to reload its schema cache
+NOTIFY pgrst, 'reload schema';
