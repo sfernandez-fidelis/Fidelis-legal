@@ -10,4 +10,16 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export const supabase = createClient(
   supabaseUrl || 'https://placeholder.supabase.co',
   supabaseAnonKey || 'placeholder',
+  {
+    auth: {
+      // Persist session to localStorage so refresh doesn't require a server roundtrip
+      persistSession: true,
+      // Detect session from URL hash (needed for OAuth callback)
+      detectSessionInUrl: true,
+      // Auto-refresh token before it expires
+      autoRefreshToken: true,
+      // Use PKCE flow for better security and faster token exchange
+      flowType: 'pkce',
+    },
+  },
 );

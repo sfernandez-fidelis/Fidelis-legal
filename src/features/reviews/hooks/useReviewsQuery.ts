@@ -27,6 +27,10 @@ export function usePendingReviewCount() {
     queryKey: REVIEW_KEYS.pendingCount(orgId),
     queryFn: () => reviewService.getPendingCount(orgId),
     enabled: Boolean(orgId),
+    // Don't refetch on every navigation — cache for 60s
+    staleTime: 60_000,
+    // Show 0 immediately while loading so the sidebar renders without delay
+    placeholderData: 0,
   });
 }
 

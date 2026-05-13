@@ -50,8 +50,11 @@ export default defineConfig(({mode}) => {
         output: {
           manualChunks: {
             vendor: ['react', 'react-dom', 'react-router-dom', '@tanstack/react-query'],
+            supabase: ['@supabase/supabase-js'],
+            monitoring: ['@sentry/react'],
+            icons: ['lucide-react'],
             editors: ['@tiptap/react', '@tiptap/starter-kit'],
-            generators: ['docx', 'jspdf', 'jspdf-autotable', 'html2pdf.js'],
+            generators: ['docx', 'jspdf', 'jspdf-autotable', 'html2pdf.js', 'pdf-lib'],
           },
         },
       },

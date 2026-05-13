@@ -9,7 +9,7 @@ export function useSessionQuery() {
     staleTime: Infinity,
     gcTime: 60 * 60 * 1000,
     retry: 1,
-    retryDelay: 3_000,
+    retryDelay: 1_000,
   });
 }
 

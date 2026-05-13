@@ -25,29 +25,28 @@ export const authService = {
       return inFlightSessionRequest;
     }
 
-    const timeoutSecs = 20;
+    const timeoutSecs = 8;
     const timeout = new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error(`Session request timed out after ${timeoutSecs}s`)), timeoutSecs * 1000),
     );
 
     const sessionFn = (async () => {
-      console.log('[AuthService] Fetching session via getUser...');
-      // Use getSession first, then getUser to avoid deadlock in some SDK versions
-      // during the initial load or token refresh.
+      console.log('[AuthService] Fetching session via getSession...');
       const { data: { session: localSession } } = await supabase.auth.getSession();
       
-      if (!localSession?.user) {
-        console.log('[AuthService] No local session found, trying getUser (server-side check)...');
-        const { data, error } = await supabase.auth.getUser();
-        if (error || !data.user) {
-          console.log('[AuthService] No user found on server either.');
-          return null;
-        }
-        return getSharedAppSession(data.user);
+      if (localSession?.user) {
+        console.log('[AuthService] Found local session, building app session.');
+        return getSharedAppSession(localSession.user);
       }
 
-      console.log('[AuthService] Found local session, using it to build/sync app session.');
-      return getSharedAppSession(localSession.user);
+      // No local session — try server-side check only as fallback
+      console.log('[AuthService] No local session, trying getUser...');
+      const { data, error } = await supabase.auth.getUser();
+      if (error || !data.user) {
+        console.log('[AuthService] No user found.');
+        return null;
+      }
+      return getSharedAppSession(data.user);
     })();
 
     inFlightSessionRequest = Promise.race([timeout, sessionFn]);
@@ -132,27 +131,39 @@ export async function getSharedAppSession(user: User): Promise<AppSession> {
 async function buildAppSession(user: User): Promise<AppSession> {
   console.log('[AuthService] Building session for:', user.email);
   
-  // Each step has a per-operation timeout of 30s to ensure we don't hang indefinitely 
-  // if a specific DB call is stuck.
+  // Per-operation timeout reduced to 10s for faster failure detection
   const withTimeout = <T>(op: Promise<T>, name: string): Promise<T> => 
     Promise.race([
       op,
-      new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`Timed out: ${name}`)), 30_000))
+      new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`Timed out: ${name}`)), 10_000))
     ]);
 
   try {
-    console.log('[AuthService] Steps 1 & 2: Ensuring profile and checking invitations concurrently...');
-    const [profile] = await Promise.all([
-      withTimeout(ensureProfile(user), 'ensureProfile'),
-      withTimeout(acceptPendingInvitations(user), 'acceptPendingInvitations'),
-    ]);
+    // Run ALL three operations in parallel:
+    // - ensureProfile (needed for session)
+    // - fetchMembership (needed for session)
+    // - acceptPendingInvitations (fire-and-forget, non-blocking)
+    console.log('[AuthService] Running profile, membership, and invitations in parallel...');
     
-    console.log('[AuthService] Step 3: Fetching membership...');
-    let membership = await withTimeout(fetchMembership(user.id), 'fetchMembership');
+    const invitationsPromise = acceptPendingInvitations(user).catch((err) => {
+      // Invitations are non-critical — log and continue
+      console.warn('[AuthService] acceptPendingInvitations failed (non-blocking):', err);
+    });
 
-    if (!membership) {
-      console.log('[AuthService] Step 4: Bootstrapping workspace...');
-      membership = await withTimeout(bootstrapWorkspace(user), 'bootstrapWorkspace');
+    const [profile, membership] = await Promise.all([
+      withTimeout(ensureProfile(user), 'ensureProfile'),
+      withTimeout(
+        // Chain: first accept invitations (fire-and-forget started above),
+        // then fetch membership so new invitations are reflected
+        invitationsPromise.then(() => fetchMembership(user.id)),
+        'fetchMembership',
+      ),
+    ]);
+
+    let finalMembership = membership;
+    if (!finalMembership) {
+      console.log('[AuthService] No membership found, bootstrapping workspace...');
+      finalMembership = await withTimeout(bootstrapWorkspace(user), 'bootstrapWorkspace');
     }
 
     console.log('[AuthService] Session built successfully.');
@@ -168,18 +179,18 @@ async function buildAppSession(user: User): Promise<AppSession> {
         fullName: profile.full_name,
       },
       membership: {
-        organizationId: membership.organization_id,
-        role: membership.role,
+        organizationId: finalMembership.organization_id,
+        role: finalMembership.role,
       },
       activeOrganization: {
-        id: membership.organizations.id,
-        name: membership.organizations.name,
-        slug: membership.organizations.slug,
+        id: finalMembership.organizations.id,
+        name: finalMembership.organizations.name,
+        slug: finalMembership.organizations.slug,
       },
       permissions: {
-        canManageOrganization: membership.role === 'owner' || membership.role === 'admin',
-        canEditContent: membership.role === 'owner' || membership.role === 'admin' || membership.role === 'editor',
-        canViewAuditLog: membership.role === 'owner' || membership.role === 'admin',
+        canManageOrganization: finalMembership.role === 'owner' || finalMembership.role === 'admin',
+        canEditContent: finalMembership.role === 'owner' || finalMembership.role === 'admin' || finalMembership.role === 'editor',
+        canViewAuditLog: finalMembership.role === 'owner' || finalMembership.role === 'admin',
       },
     } satisfies AppSession;
   } catch (error) {

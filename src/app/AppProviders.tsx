@@ -27,11 +27,20 @@ function SessionSync() {
         return;
       }
 
-      // For SIGNED_IN / INITIAL_SESSION: build the app session using the
-      // User object already provided by the event — no extra getSession()
-      // or getUser() call, so no SDK mutex contention.
-      // We do NOT await this call here to avoid blocking the SDK's initial 
-      // state emission (deadlock prevention).
+      // INITIAL_SESSION: This fires on page load. If React Query is already
+      // fetching the session via useSessionQuery (queryFn), skip the duplicate
+      // build to avoid contention and wasted work.
+      if (event === 'INITIAL_SESSION') {
+        const existingData = client.getQueryData(queryKeys.session());
+        const queryState = client.getQueryState(queryKeys.session());
+        if (existingData || queryState?.fetchStatus === 'fetching') {
+          return;
+        }
+      }
+
+      // For SIGNED_IN / INITIAL_SESSION (when no query is in flight):
+      // build the app session using the User object already provided by the
+      // event — no extra getSession() or getUser() call.
       void getSharedAppSession(session.user)
         .then((appSession) => {
           client.setQueryData(queryKeys.session(), appSession);
