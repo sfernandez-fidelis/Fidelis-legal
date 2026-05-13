@@ -5,20 +5,22 @@ import { teamService } from '../api/teamService';
 
 export function useTeamMembersQuery() {
   const session = useAppSession();
+  const orgId = session?.activeOrganization.id;
   return useQuery({
-    queryKey: queryKeys.teamMembers(session?.activeOrganization.id),
-    queryFn: () => teamService.listMembers(session!.activeOrganization.id),
-    enabled: Boolean(session?.activeOrganization.id),
+    queryKey: queryKeys.teamMembers(orgId),
+    queryFn: () => teamService.listMembers(orgId!),
+    enabled: Boolean(orgId),
     staleTime: 60 * 1000,
   });
 }
 
 export function useInvitationsQuery() {
   const session = useAppSession();
+  const orgId = session?.activeOrganization.id;
   return useQuery({
-    queryKey: queryKeys.invitations(session?.activeOrganization.id),
-    queryFn: () => teamService.listInvitations(session!.activeOrganization.id),
-    enabled: Boolean(session?.activeOrganization.id),
+    queryKey: queryKeys.invitations(orgId),
+    queryFn: () => teamService.listInvitations(orgId!),
+    enabled: Boolean(orgId),
     staleTime: 30 * 1000,
   });
 }
@@ -27,8 +29,13 @@ export function useInviteMember() {
   const session = useAppSession();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload: { email: string; role: 'admin' | 'editor' | 'viewer' }) =>
-      teamService.inviteMember(session!.activeOrganization.id, session!.user.id, payload),
+    mutationFn: (payload: { email: string; role: 'admin' | 'editor' | 'viewer' }) => {
+      const orgId = session?.activeOrganization.id;
+      const actorId = session?.user.id;
+      if (!orgId) throw new Error('Sin sesión activa. Recarga la página.');
+      if (!actorId) throw new Error('Usuario no identificado. Recarga la página.');
+      return teamService.inviteMember(orgId, actorId, payload);
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.invitations(session?.activeOrganization.id) });
     },
@@ -39,8 +46,11 @@ export function useUpdateMemberRole() {
   const session = useAppSession();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ memberId, role }: { memberId: string; role: 'admin' | 'editor' | 'viewer' }) =>
-      teamService.updateMemberRole(session!.activeOrganization.id, memberId, role),
+    mutationFn: ({ memberId, role }: { memberId: string; role: 'admin' | 'editor' | 'viewer' }) => {
+      const orgId = session?.activeOrganization.id;
+      if (!orgId) throw new Error('Sin sesión activa. Recarga la página.');
+      return teamService.updateMemberRole(orgId, memberId, role);
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.teamMembers(session?.activeOrganization.id) });
       await queryClient.invalidateQueries({ queryKey: queryKeys.session() });
@@ -52,8 +62,11 @@ export function useRevokeInvitation() {
   const session = useAppSession();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ invitationId }: { invitationId: string }) =>
-      teamService.revokeInvitation(session!.activeOrganization.id, invitationId),
+    mutationFn: ({ invitationId }: { invitationId: string }) => {
+      const orgId = session?.activeOrganization.id;
+      if (!orgId) throw new Error('Sin sesión activa. Recarga la página.');
+      return teamService.revokeInvitation(orgId, invitationId);
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.invitations(session?.activeOrganization.id) });
     },
@@ -62,10 +75,11 @@ export function useRevokeInvitation() {
 
 export function useAuditLogQuery() {
   const session = useAppSession();
+  const orgId = session?.activeOrganization.id;
   return useQuery({
-    queryKey: queryKeys.auditLog(session?.activeOrganization.id),
-    queryFn: () => teamService.listAuditLog(session!.activeOrganization.id),
-    enabled: Boolean(session?.activeOrganization.id),
+    queryKey: queryKeys.auditLog(orgId),
+    queryFn: () => teamService.listAuditLog(orgId!),
+    enabled: Boolean(orgId),
     staleTime: 30 * 1000,
   });
 }

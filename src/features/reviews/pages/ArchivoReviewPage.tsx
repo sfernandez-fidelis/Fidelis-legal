@@ -12,17 +12,56 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useReviewsQuery, useSubmitRejection } from '../hooks/useReviewsQuery';
+import { useInsuranceAgentsQuery } from '../hooks/useInsuranceAgents';
+import { REJECTION_OPTIONS, type RejectionOptionValue } from '../api/reviewService';
 import { PageLoader } from '../../../shared/components/PageLoader';
 import { PageErrorState } from '../../../shared/components/PageErrorState';
 
+interface RejectionFormState {
+  documentDate: string;
+  fidelisEntryDate: string;
+  agentId: string;
+  agentName: string;
+  clientName: string;
+  reason: string;
+  signaturePrincipalDetail: string;
+  signatureGuarantorDetail: string;
+  rejectionOptions: RejectionOptionValue[];
+}
+
+const EMPTY_FORM: RejectionFormState = {
+  documentDate: '',
+  fidelisEntryDate: '',
+  agentId: '',
+  agentName: '',
+  clientName: '',
+  reason: '',
+  signaturePrincipalDetail: '',
+  signatureGuarantorDetail: '',
+  rejectionOptions: [],
+};
+
 export function ArchivoReviewPage() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [reason, setReason] = useState('');
+  const [form, setForm] = useState<RejectionFormState>(EMPTY_FORM);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const reviewsQuery = useReviewsQuery('all');
   const submitMutation = useSubmitRejection();
+  const agentsQuery = useInsuranceAgentsQuery();
+
+  const setField = <K extends keyof RejectionFormState>(key: K, value: RejectionFormState[K]) =>
+    setForm((prev) => ({ ...prev, [key]: value }));
+
+  const toggleOption = (value: RejectionOptionValue) => {
+    setForm((prev) => ({
+      ...prev,
+      rejectionOptions: prev.rejectionOptions.includes(value)
+        ? prev.rejectionOptions.filter((v) => v !== value)
+        : [...prev.rejectionOptions, value],
+    }));
+  };
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -66,19 +105,44 @@ export function ArchivoReviewPage() {
     setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
+  const handleAgentChange = (agentId: string) => {
+    const agent = agentsQuery.data?.find((a) => a.id === agentId);
+    setForm((prev) => ({
+      ...prev,
+      agentId,
+      agentName: agent?.fullName ?? '',
+    }));
+  };
+
   const handleSubmit = async () => {
     if (selectedFiles.length === 0) {
       toast.error('Seleccione al menos un archivo PDF');
+      return;
+    }
+    if (!form.reason.trim()) {
+      toast.error('El motivo detallado es obligatorio');
       return;
     }
 
     let successCount = 0;
     for (const file of selectedFiles) {
       try {
-        await submitMutation.mutateAsync({ file, reason: reason || undefined });
+        await submitMutation.mutateAsync({
+          file,
+          reason: form.reason || undefined,
+          documentDate: form.documentDate || undefined,
+          fidelisEntryDate: form.fidelisEntryDate || undefined,
+          agentId: form.agentId || undefined,
+          agentName: form.agentName || undefined,
+          clientName: form.clientName || undefined,
+          signaturePrincipalDetail: form.signaturePrincipalDetail || undefined,
+          signatureGuarantorDetail: form.signatureGuarantorDetail || undefined,
+          rejectionOptions: form.rejectionOptions,
+        });
         successCount++;
-      } catch {
-        toast.error(`Error al enviar: ${file.name}`);
+      } catch (err: any) {
+        const msg = err?.message ?? 'Error desconocido';
+        toast.error(`Error al enviar "${file.name}": ${msg}`);
       }
     }
 
@@ -87,7 +151,7 @@ export function ArchivoReviewPage() {
         `${successCount} documento${successCount > 1 ? 's' : ''} enviado${successCount > 1 ? 's' : ''} a revisión`,
       );
       setSelectedFiles([]);
-      setReason('');
+      setForm(EMPTY_FORM);
     }
   };
 
@@ -101,15 +165,16 @@ export function ArchivoReviewPage() {
           Rechazar Contragarantías
         </h1>
         <p className="text-gray-500">
-          Suba los documentos con firmas que necesitan ser rechazados. El equipo
-          de Jurídico recibirá una alerta para revisarlos.
+          Suba los documentos con firmas que necesitan ser rechazados. Complete
+          todos los campos para un registro completo.
         </p>
       </header>
 
       {/* Upload Zone */}
       <section className="space-y-6">
+        {/* Drop Zone */}
         <div
-          className={`relative flex min-h-[240px] cursor-pointer flex-col items-center justify-center rounded-3xl border-2 border-dashed transition-all ${
+          className={`relative flex min-h-[200px] cursor-pointer flex-col items-center justify-center rounded-3xl border-2 border-dashed transition-all ${
             dragOver
               ? 'border-brand-400 bg-brand-50/60 shadow-lg shadow-brand-100'
               : 'border-gray-200 bg-white hover:border-brand-300 hover:bg-brand-50/30'
@@ -139,9 +204,7 @@ export function ArchivoReviewPage() {
           </div>
 
           <p className="text-lg font-semibold text-gray-700">
-            {dragOver
-              ? 'Suelte los archivos aquí'
-              : 'Arrastre archivos PDF aquí'}
+            {dragOver ? 'Suelte los archivos aquí' : 'Arrastre archivos PDF aquí'}
           </p>
           <p className="mt-1 text-sm text-gray-400">
             o haga clic para seleccionar desde su computadora
@@ -150,91 +213,194 @@ export function ArchivoReviewPage() {
 
         {/* Selected Files */}
         {selectedFiles.length > 0 && (
-          <div className="space-y-4">
-            <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-gray-500">
+          <div className="divide-y divide-gray-100 overflow-hidden rounded-2xl border border-gray-100 bg-white">
+            <p className="px-5 py-3 text-xs font-bold uppercase tracking-[0.2em] text-gray-400">
               Archivos seleccionados ({selectedFiles.length})
-            </h3>
-
-            <div className="divide-y divide-gray-100 overflow-hidden rounded-2xl border border-gray-100 bg-white">
-              {selectedFiles.map((file, index) => (
-                <div
-                  className="flex items-center justify-between px-5 py-4"
-                  key={`${file.name}-${index}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 text-red-500">
-                      <FileText size={20} />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900">
-                        {file.name}
-                      </p>
-                      <p className="text-xs text-gray-400">
-                        {(file.size / 1024 / 1024).toFixed(2)} MB
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    className="rounded-xl p-2 text-gray-400 transition hover:bg-red-50 hover:text-red-500"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeFile(index);
-                    }}
-                    type="button"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            {/* Reason */}
-            <div className="space-y-2">
-              <label
-                className="text-sm font-semibold text-gray-700"
-                htmlFor="rejection-reason"
+            </p>
+            {selectedFiles.map((file, index) => (
+              <div
+                className="flex items-center justify-between px-5 py-4"
+                key={`${file.name}-${index}`}
               >
-                Motivo del rechazo{' '}
-                <span className="font-normal text-gray-400">(opcional)</span>
-              </label>
-              <textarea
-                className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-100"
-                id="rejection-reason"
-                onChange={(e) => setReason(e.target.value)}
-                placeholder="Ej: Firma no coincide con el DPI, documento incompleto..."
-                rows={3}
-                value={reason}
-              />
-            </div>
-
-            {/* Submit */}
-            <button
-              className="flex w-full items-center justify-center gap-3 rounded-2xl bg-red-600 px-6 py-4 text-sm font-bold text-white shadow-lg shadow-red-200 transition hover:bg-red-700 hover:shadow-xl hover:shadow-red-200 disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={submitMutation.isPending}
-              onClick={handleSubmit}
-              type="button"
-            >
-              {submitMutation.isPending ? (
-                <>
-                  <Loader2 className="animate-spin" size={18} />
-                  Enviando...
-                </>
-              ) : (
-                <>
-                  <AlertTriangle size={18} />
-                  Rechazar y enviar a Jurídico
-                </>
-              )}
-            </button>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 text-red-500">
+                    <FileText size={20} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">{file.name}</p>
+                    <p className="text-xs text-gray-400">
+                      {(file.size / 1024 / 1024).toFixed(2)} MB
+                    </p>
+                  </div>
+                </div>
+                <button
+                  className="rounded-xl p-2 text-gray-400 transition hover:bg-red-50 hover:text-red-500"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeFile(index);
+                  }}
+                  type="button"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))}
           </div>
         )}
+
+        {/* Rejection Form — always visible so user fills it before or after selecting files */}
+        <div className="space-y-6 rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
+          <h2 className="text-base font-bold text-gray-800">
+            Datos del rechazo
+          </h2>
+
+          {/* Dates row */}
+          <div className="grid gap-4 sm:grid-cols-3">
+            <FormField label="Fecha del documento">
+              <input
+                className="form-input"
+                onChange={(e) => setField('documentDate', e.target.value)}
+                type="date"
+                value={form.documentDate}
+              />
+            </FormField>
+            <FormField label="Fecha de ingreso en Fidelis">
+              <input
+                className="form-input"
+                onChange={(e) => setField('fidelisEntryDate', e.target.value)}
+                type="date"
+                value={form.fidelisEntryDate}
+              />
+            </FormField>
+            <FormField label="Fecha de rechazo">
+              <input
+                className="form-input bg-gray-50 text-gray-500 cursor-not-allowed"
+                disabled
+                readOnly
+                type="date"
+                value={new Date().toISOString().slice(0, 10)}
+              />
+              <p className="mt-1 text-[11px] text-gray-400">Automática</p>
+            </FormField>
+          </div>
+
+          {/* Agent & Client row */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField label="Agente de seguros">
+              {agentsQuery.isLoading ? (
+                <div className="form-input flex items-center gap-2 text-gray-400">
+                  <Loader2 className="animate-spin" size={14} />
+                  Cargando agentes...
+                </div>
+              ) : (
+                <select
+                  className="form-input"
+                  onChange={(e) => handleAgentChange(e.target.value)}
+                  value={form.agentId}
+                >
+                  <option value="">— Seleccionar agente —</option>
+                  {(agentsQuery.data ?? []).map((agent) => (
+                    <option key={agent.id} value={agent.id}>
+                      {agent.fullName}
+                      {agent.code ? ` (${agent.code})` : ''}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </FormField>
+            <FormField label="Cliente / Fiado">
+              <input
+                className="form-input"
+                onChange={(e) => setField('clientName', e.target.value)}
+                placeholder="Nombre del cliente o fiado"
+                type="text"
+                value={form.clientName}
+              />
+            </FormField>
+          </div>
+
+          {/* Rejection options */}
+          <FormField label="Motivos de rechazo">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {REJECTION_OPTIONS.map((opt) => (
+                <label
+                  key={opt.value}
+                  className={`flex cursor-pointer items-start gap-2 rounded-xl border px-3 py-2.5 text-xs transition-all ${
+                    form.rejectionOptions.includes(opt.value)
+                      ? 'border-red-300 bg-red-50 text-red-700'
+                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                  }`}
+                >
+                  <input
+                    checked={form.rejectionOptions.includes(opt.value)}
+                    className="mt-0.5 shrink-0 accent-red-600"
+                    onChange={() => toggleOption(opt.value)}
+                    type="checkbox"
+                  />
+                  {opt.label}
+                </label>
+              ))}
+            </div>
+          </FormField>
+
+          {/* Detailed reason */}
+          <FormField label={<>Motivo detallado <span className="font-normal text-red-500">*</span></>}>
+            <textarea
+              className="form-input min-h-[96px] resize-y"
+              onChange={(e) => setField('reason', e.target.value)}
+              placeholder="Ej: Firma del fiador no coincide con DPI presentado, hay diferencia en el trazo del apellido..."
+              rows={3}
+              value={form.reason}
+            />
+          </FormField>
+
+          {/* Signature details */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField label="Detalle firma fiado (principal)">
+              <input
+                className="form-input"
+                onChange={(e) => setField('signaturePrincipalDetail', e.target.value)}
+                placeholder="Ej: Firma ilegible, raspaduras..."
+                type="text"
+                value={form.signaturePrincipalDetail}
+              />
+            </FormField>
+            <FormField label="Detalle firma fiador (garante)">
+              <input
+                className="form-input"
+                onChange={(e) => setField('signatureGuarantorDetail', e.target.value)}
+                placeholder="Ej: No coincide con escritura pública..."
+                type="text"
+                value={form.signatureGuarantorDetail}
+              />
+            </FormField>
+          </div>
+
+          {/* Submit */}
+          <button
+            className="flex w-full items-center justify-center gap-3 rounded-2xl bg-red-600 px-6 py-4 text-sm font-bold text-white shadow-lg shadow-red-200 transition hover:bg-red-700 hover:shadow-xl hover:shadow-red-200 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={submitMutation.isPending || selectedFiles.length === 0}
+            onClick={handleSubmit}
+            type="button"
+          >
+            {submitMutation.isPending ? (
+              <>
+                <Loader2 className="animate-spin" size={18} />
+                Comprimiendo y enviando...
+              </>
+            ) : (
+              <>
+                <AlertTriangle size={18} />
+                Rechazar {selectedFiles.length > 0 ? `(${selectedFiles.length} archivo${selectedFiles.length > 1 ? 's' : ''})` : '— seleccione archivos'}
+              </>
+            )}
+          </button>
+        </div>
       </section>
 
       {/* History */}
       <section className="space-y-4">
-        <h2 className="text-xl font-bold text-gray-900">
-          Historial de rechazos
-        </h2>
+        <h2 className="text-xl font-bold text-gray-900">Historial de rechazos</h2>
 
         {reviewsQuery.isLoading && <PageLoader message="Cargando historial..." />}
         {reviewsQuery.isError && (
@@ -268,7 +434,10 @@ export function ArchivoReviewPage() {
                     Documento
                   </th>
                   <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.3em] text-gray-400">
-                    Fecha
+                    Agente / Cliente
+                  </th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.3em] text-gray-400">
+                    Fecha rechazo
                   </th>
                   <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-[0.3em] text-gray-400">
                     Estado
@@ -286,15 +455,40 @@ export function ArchivoReviewPage() {
                         {review.originalFileName}
                       </p>
                       {review.rejectionReason && (
-                        <p className="mt-1 text-xs text-gray-400">
+                        <p className="mt-1 max-w-xs truncate text-xs text-gray-400 italic">
                           {review.rejectionReason}
                         </p>
+                      )}
+                      {review.rejectionOptions.length > 0 && (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {review.rejectionOptions.slice(0, 3).map((opt) => (
+                            <span
+                              key={opt}
+                              className="inline-block rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-medium text-red-600"
+                            >
+                              {REJECTION_OPTIONS.find((o) => o.value === opt)?.label ?? opt}
+                            </span>
+                          ))}
+                          {review.rejectionOptions.length > 3 && (
+                            <span className="text-[10px] text-gray-400">
+                              +{review.rejectionOptions.length - 3} más
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      {review.agentName && (
+                        <p className="text-sm text-gray-700">{review.agentName}</p>
+                      )}
+                      {review.clientName && (
+                        <p className="text-xs text-gray-400">{review.clientName}</p>
                       )}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-400">
                       {format(
                         new Date(review.rejectedAt),
-                        "dd MMM yyyy, HH:mm",
+                        'dd MMM yyyy, HH:mm',
                         { locale: es },
                       )}
                     </td>
@@ -308,6 +502,23 @@ export function ArchivoReviewPage() {
           </div>
         )}
       </section>
+    </div>
+  );
+}
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function FormField({
+  label,
+  children,
+}: {
+  label: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label className="text-sm font-semibold text-gray-700">{label}</label>
+      {children}
     </div>
   );
 }

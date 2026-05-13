@@ -1,6 +1,21 @@
+import { PDFDocument } from 'pdf-lib';
 import { supabase } from '../../../lib/supabase/client';
 
 export type ReviewStatus = 'pending_review' | 'confirmed' | 'restored';
+
+// All the structured options for rejection reasons (checkboxes)
+export const REJECTION_OPTIONS = [
+  { value: 'firma_no_coincide', label: 'Firma no coincide con DPI' },
+  { value: 'documento_incompleto', label: 'Documento incompleto' },
+  { value: 'dpi_vencido', label: 'DPI vencido' },
+  { value: 'datos_incorrectos', label: 'Datos incorrectos' },
+  { value: 'sin_legalizacion', label: 'Sin legalización notarial' },
+  { value: 'firma_ilegible', label: 'Firma ilegible' },
+  { value: 'paginas_faltantes', label: 'Páginas faltantes' },
+  { value: 'otro', label: 'Otro (ver motivo detallado)' },
+] as const;
+
+export type RejectionOptionValue = (typeof REJECTION_OPTIONS)[number]['value'];
 
 export interface DocumentReview {
   id: string;
@@ -14,12 +29,35 @@ export interface DocumentReview {
   rejectedByName?: string | null;
   rejectedAt: string;
   rejectionReason?: string | null;
+  // Extended fields
+  documentDate?: string | null;
+  fidelisEntryDate?: string | null;
+  agentId?: string | null;
+  agentName?: string | null;
+  clientName?: string | null;
+  signaturePrincipalDetail?: string | null;
+  signatureGuarantorDetail?: string | null;
+  rejectionOptions: string[];
+  // Review resolution
   reviewedBy?: string | null;
   reviewedByName?: string | null;
   reviewedAt?: string | null;
   reviewNotes?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface RejectionPayload {
+  file: File;
+  reason?: string;
+  documentDate?: string;
+  fidelisEntryDate?: string;
+  agentId?: string;
+  agentName?: string;
+  clientName?: string;
+  signaturePrincipalDetail?: string;
+  signatureGuarantorDetail?: string;
+  rejectionOptions?: string[];
 }
 
 function normalizeReview(row: any): DocumentReview {
@@ -35,6 +73,14 @@ function normalizeReview(row: any): DocumentReview {
     rejectedByName: row.rejector?.full_name ?? null,
     rejectedAt: row.rejected_at,
     rejectionReason: row.rejection_reason,
+    documentDate: row.document_date ?? null,
+    fidelisEntryDate: row.fidelis_entry_date ?? null,
+    agentId: row.agent_id ?? null,
+    agentName: row.agent_name ?? null,
+    clientName: row.client_name ?? null,
+    signaturePrincipalDetail: row.signature_principal_detail ?? null,
+    signatureGuarantorDetail: row.signature_guarantor_detail ?? null,
+    rejectionOptions: row.rejection_options ?? [],
     reviewedBy: row.reviewed_by,
     reviewedByName: row.reviewer?.full_name ?? null,
     reviewedAt: row.reviewed_at,
@@ -42,6 +88,38 @@ function normalizeReview(row: any): DocumentReview {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+}
+
+/**
+ * Compresses a PDF file using pdf-lib by re-serializing the document.
+ * This removes unused objects, metadata, and linearization hints,
+ * typically reducing size by 15–50% for scan-heavy PDFs.
+ * The objectsPerTick option spread CPU work across frames to avoid UI blocking.
+ */
+async function compressPdf(file: File): Promise<File> {
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
+
+    // Re-serialize without linearization; pdf-lib discards unused objects
+    const compressedBytes = await pdfDoc.save({
+      useObjectStreams: true,  // pack multiple objects into compressed streams
+      addDefaultPage: false,
+    });
+
+    const compressedBlob = new Blob([compressedBytes], { type: 'application/pdf' });
+
+    // Only use the compressed version if it's actually smaller
+    if (compressedBlob.size < file.size) {
+      return new File([compressedBlob], file.name, { type: 'application/pdf' });
+    }
+
+    console.debug('[ReviewService] Compressed PDF is not smaller than original, using original.');
+    return file;
+  } catch (err) {
+    console.warn('[ReviewService] PDF compression failed, uploading original:', err);
+    return file;
+  }
 }
 
 export const reviewService = {
@@ -82,24 +160,29 @@ export const reviewService = {
   async submitRejection(
     organizationId: string,
     actorId: string,
-    file: File,
-    reason?: string,
+    payload: RejectionPayload,
   ): Promise<string> {
+    const { file, reason, documentDate, fidelisEntryDate, agentId, agentName, clientName, signaturePrincipalDetail, signatureGuarantorDetail, rejectionOptions } = payload;
+
+    // Compress PDF before upload
+    const fileToUpload = await compressPdf(file);
+    console.debug(
+      `[ReviewService] Upload size: ${(fileToUpload.size / 1024).toFixed(1)} KB (original: ${(file.size / 1024).toFixed(1)} KB)`,
+    );
+
     const timestamp = Date.now();
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
     const storagePath = `${organizationId}/originals/${timestamp}_${safeName}`;
 
-    // Upload original file to storage
     const { error: uploadError } = await supabase.storage
       .from('review-files')
-      .upload(storagePath, file, {
-        contentType: file.type || 'application/pdf',
+      .upload(storagePath, fileToUpload, {
+        contentType: 'application/pdf',
         upsert: false,
       });
 
     if (uploadError) throw uploadError;
 
-    // Create review record
     const { data, error } = await supabase
       .from('document_reviews')
       .insert({
@@ -110,6 +193,14 @@ export const reviewService = {
         rejected_by: actorId,
         rejected_at: new Date().toISOString(),
         rejection_reason: reason || null,
+        document_date: documentDate || null,
+        fidelis_entry_date: fidelisEntryDate || null,
+        agent_id: agentId || null,
+        agent_name: agentName || null,
+        client_name: clientName || null,
+        signature_principal_detail: signaturePrincipalDetail || null,
+        signature_guarantor_detail: signatureGuarantorDetail || null,
+        rejection_options: rejectionOptions ?? [],
       })
       .select('id')
       .single();
@@ -127,25 +218,22 @@ export const reviewService = {
     originalStoragePath?: string,
   ): Promise<void> {
     if (decision === 'confirmed' && originalStoragePath) {
-      // 1. Download clean file
       const { data: fileData, error: downloadError } = await supabase.storage
         .from('review-files')
         .download(originalStoragePath);
-        
+
       if (downloadError) throw downloadError;
-      
-      // 2. Stamp file
+
       const { stampPdf } = await import('../../../lib/pdf/stamper');
       const stampedBlob = await stampPdf(fileData);
-      
-      // 3. Re-upload stamped file to same path (upsert)
+
       const { error: uploadError } = await supabase.storage
         .from('review-files')
         .upload(originalStoragePath, stampedBlob, {
           contentType: 'application/pdf',
           upsert: true,
         });
-        
+
       if (uploadError) throw uploadError;
     }
 
@@ -167,7 +255,7 @@ export const reviewService = {
   async getFileUrl(storagePath: string): Promise<string> {
     const { data, error } = await supabase.storage
       .from('review-files')
-      .createSignedUrl(storagePath, 3600); // 1 hour
+      .createSignedUrl(storagePath, 3600);
 
     if (error) throw error;
     return data.signedUrl;

@@ -10,11 +10,12 @@ import {
   Loader2,
   RotateCcw,
   ShieldCheck,
+  User,
   X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useReviewsQuery, useResolveReview } from '../hooks/useReviewsQuery';
-import { reviewService, type DocumentReview, type ReviewStatus } from '../api/reviewService';
+import { reviewService, REJECTION_OPTIONS, type DocumentReview, type ReviewStatus } from '../api/reviewService';
 import { PageLoader } from '../../../shared/components/PageLoader';
 import { PageErrorState } from '../../../shared/components/PageErrorState';
 
@@ -89,8 +90,8 @@ export function LegalReviewPage() {
       setSelectedReview(null);
       setPreviewUrl(null);
       setReviewNotes('');
-    } catch {
-      toast.error('Error al procesar la decisión');
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Error al procesar la decisión');
     }
   };
 
@@ -213,40 +214,90 @@ export function LegalReviewPage() {
             </div>
 
             {/* Modal Body */}
-            <div className="flex-1 overflow-auto p-6 space-y-6">
-              {/* Info */}
-              <div className="grid grid-cols-2 gap-4 rounded-2xl bg-gray-50 p-5">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400">
-                    Rechazado por
-                  </p>
-                  <p className="mt-1 text-sm font-semibold text-gray-900">
-                    {selectedReview.rejectedByName || 'Archivo'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400">
-                    Fecha
-                  </p>
-                  <p className="mt-1 text-sm font-semibold text-gray-900">
-                    {format(
-                      new Date(selectedReview.rejectedAt),
-                      "dd MMM yyyy, HH:mm",
-                      { locale: es },
-                    )}
-                  </p>
-                </div>
-                {selectedReview.rejectionReason && (
-                  <div className="col-span-2">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400">
-                      Motivo
-                    </p>
-                    <p className="mt-1 text-sm text-gray-700">
-                      {selectedReview.rejectionReason}
-                    </p>
-                  </div>
+            <div className="flex-1 overflow-auto p-6 space-y-5">
+              {/* Core rejection info */}
+              <div className="grid grid-cols-2 gap-4 rounded-2xl bg-gray-50 p-5 sm:grid-cols-3">
+                <InfoCell label="Rechazado por" value={selectedReview.rejectedByName || 'Archivo'} />
+                <InfoCell
+                  label="Fecha de rechazo"
+                  value={format(new Date(selectedReview.rejectedAt), 'dd MMM yyyy, HH:mm', { locale: es })}
+                />
+                {selectedReview.documentDate && (
+                  <InfoCell
+                    label="Fecha del documento"
+                    value={format(new Date(selectedReview.documentDate), 'dd MMM yyyy', { locale: es })}
+                  />
+                )}
+                {selectedReview.fidelisEntryDate && (
+                  <InfoCell
+                    label="Ingreso en Fidelis"
+                    value={format(new Date(selectedReview.fidelisEntryDate), 'dd MMM yyyy', { locale: es })}
+                  />
+                )}
+                {selectedReview.agentName && (
+                  <InfoCell label="Agente" value={selectedReview.agentName} />
+                )}
+                {selectedReview.clientName && (
+                  <InfoCell label="Cliente / Fiado" value={selectedReview.clientName} />
                 )}
               </div>
+
+              {/* Rejection options chips */}
+              {selectedReview.rejectionOptions.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400">
+                    Motivos seleccionados
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedReview.rejectionOptions.map((opt) => (
+                      <span
+                        key={opt}
+                        className="inline-flex items-center rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-600"
+                      >
+                        {REJECTION_OPTIONS.find((o) => o.value === opt)?.label ?? opt}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Detailed reason */}
+              {selectedReview.rejectionReason && (
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400">
+                    Motivo detallado
+                  </p>
+                  <p className="rounded-xl bg-red-50 p-4 text-sm text-red-900">
+                    {selectedReview.rejectionReason}
+                  </p>
+                </div>
+              )}
+
+              {/* Signature details */}
+              {(selectedReview.signaturePrincipalDetail || selectedReview.signatureGuarantorDetail) && (
+                <div className="grid gap-4 rounded-2xl border border-gray-100 bg-gray-50 p-4 sm:grid-cols-2">
+                  {selectedReview.signaturePrincipalDetail && (
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400">
+                        Firma fiado (principal)
+                      </p>
+                      <p className="mt-1 text-sm text-gray-700">
+                        {selectedReview.signaturePrincipalDetail}
+                      </p>
+                    </div>
+                  )}
+                  {selectedReview.signatureGuarantorDetail && (
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400">
+                        Firma fiador (garante)
+                      </p>
+                      <p className="mt-1 text-sm text-gray-700">
+                        {selectedReview.signatureGuarantorDetail}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* PDF Preview */}
               {previewUrl && (
@@ -267,7 +318,7 @@ export function LegalReviewPage() {
                 </div>
               )}
 
-              {/* Notes */}
+              {/* Review notes — only for pending items */}
               {selectedReview.status === 'pending_review' && (
                 <div className="space-y-2">
                   <label
@@ -288,7 +339,7 @@ export function LegalReviewPage() {
                 </div>
               )}
 
-              {/* Already resolved info */}
+              {/* Already resolved banner */}
               {selectedReview.status !== 'pending_review' && (
                 <div
                   className={`rounded-2xl p-5 ${
@@ -308,7 +359,7 @@ export function LegalReviewPage() {
                       {selectedReview.reviewedAt
                         ? format(
                             new Date(selectedReview.reviewedAt),
-                            "dd MMM yyyy, HH:mm",
+                            'dd MMM yyyy, HH:mm',
                             { locale: es },
                           )
                         : ''}
@@ -321,7 +372,7 @@ export function LegalReviewPage() {
               )}
             </div>
 
-            {/* Modal Footer - Actions */}
+            {/* Modal Footer — only for pending */}
             {selectedReview.status === 'pending_review' && (
               <div className="flex gap-3 border-t border-gray-100 px-6 py-4">
                 <button
@@ -359,6 +410,19 @@ export function LegalReviewPage() {
   );
 }
 
+// ─── Sub-components ──────────────────────────────────────────────────────────
+
+function InfoCell({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400">
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-semibold text-gray-900">{value}</p>
+    </div>
+  );
+}
+
 function ReviewCard({
   review,
   onPreview,
@@ -383,7 +447,7 @@ function ReviewCard({
       <div className="flex items-center justify-between px-6 py-5">
         <div className="flex items-center gap-4">
           <div
-            className={`flex h-12 w-12 items-center justify-center rounded-2xl ${
+            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${
               isPending
                 ? 'bg-amber-50 text-amber-600'
                 : review.status === 'confirmed'
@@ -393,35 +457,59 @@ function ReviewCard({
           >
             <FileText size={24} />
           </div>
-          <div>
-            <p className="text-sm font-bold text-gray-900">
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-gray-900 truncate">
               {review.originalFileName}
             </p>
-            <div className="mt-1 flex items-center gap-3 text-xs text-gray-400">
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-gray-400">
               <span>
-                {format(new Date(review.rejectedAt), "dd MMM yyyy, HH:mm", {
+                {format(new Date(review.rejectedAt), 'dd MMM yyyy, HH:mm', {
                   locale: es,
                 })}
               </span>
-              {review.rejectedByName && (
+              {review.agentName && (
                 <>
                   <span>•</span>
-                  <span>Rechazado por {review.rejectedByName}</span>
-                </>
-              )}
-              {review.rejectionReason && (
-                <>
-                  <span>•</span>
-                  <span className="max-w-[200px] truncate italic">
-                    {review.rejectionReason}
+                  <span className="flex items-center gap-1">
+                    <User size={11} />
+                    {review.agentName}
                   </span>
                 </>
               )}
+              {review.clientName && (
+                <>
+                  <span>•</span>
+                  <span>{review.clientName}</span>
+                </>
+              )}
+              {review.rejectedByName && (
+                <>
+                  <span>•</span>
+                  <span>Subido por {review.rejectedByName}</span>
+                </>
+              )}
             </div>
+            {review.rejectionOptions.length > 0 && (
+              <div className="mt-1.5 flex flex-wrap gap-1">
+                {review.rejectionOptions.slice(0, 3).map((opt) => (
+                  <span
+                    key={opt}
+                    className="inline-block rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-medium text-red-600"
+                  >
+                    {REJECTION_OPTIONS.find((o) => o.value === opt)?.label ?? opt}
+                  </span>
+                ))}
+                {review.rejectionOptions.length > 3 && (
+                  <span className="text-[10px] text-gray-400">
+                    +{review.rejectionOptions.length - 3} más
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2 pl-4">
           <ReviewStatusBadge status={review.status} />
           <button
             className="rounded-xl p-2.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"

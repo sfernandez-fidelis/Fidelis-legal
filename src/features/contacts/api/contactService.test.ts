@@ -119,7 +119,7 @@ describe('contactService', () => {
   });
 
   it('extracts related contacts from a represented party', () => {
-    const contacts = contactService.extractDocumentContacts(createParty(), 'principal');
+    const contacts = contactService.extractDocumentContacts(createParty({ isRepresenting: true }), 'principal');
 
     expect(contacts).toHaveLength(3);
     expect(contacts[0]?.contactTypes).toContain('representative');

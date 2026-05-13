@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { reviewService, type ReviewStatus } from '../api/reviewService';
+import { reviewService, type ReviewStatus, type RejectionPayload } from '../api/reviewService';
 import { useAppSession } from '../../auth/hooks/useSessionQuery';
-import { queryKeys } from '../../../lib/queryKeys';
 
 const REVIEW_KEYS = {
   all: ['reviews'] as const,
@@ -34,12 +33,15 @@ export function usePendingReviewCount() {
 export function useSubmitRejection() {
   const session = useAppSession();
   const queryClient = useQueryClient();
-  const orgId = session?.membership.organizationId ?? '';
-  const actorId = session?.user.id ?? '';
 
   return useMutation({
-    mutationFn: ({ file, reason }: { file: File; reason?: string }) =>
-      reviewService.submitRejection(orgId, actorId, file, reason),
+    mutationFn: (payload: RejectionPayload) => {
+      const orgId = session?.membership.organizationId;
+      const actorId = session?.user.id;
+      if (!orgId) throw new Error('Sin sesión activa. Recarga la página.');
+      if (!actorId) throw new Error('Usuario no identificado. Recarga la página.');
+      return reviewService.submitRejection(orgId, actorId, payload);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: REVIEW_KEYS.all });
     },
@@ -49,8 +51,6 @@ export function useSubmitRejection() {
 export function useResolveReview() {
   const session = useAppSession();
   const queryClient = useQueryClient();
-  const orgId = session?.membership.organizationId ?? '';
-  const actorId = session?.user.id ?? '';
 
   return useMutation({
     mutationFn: ({
@@ -63,7 +63,13 @@ export function useResolveReview() {
       decision: 'confirmed' | 'restored';
       notes?: string;
       originalStoragePath?: string;
-    }) => reviewService.resolveReview(orgId, actorId, reviewId, decision, notes, originalStoragePath),
+    }) => {
+      const orgId = session?.membership.organizationId;
+      const actorId = session?.user.id;
+      if (!orgId) throw new Error('Sin sesión activa. Recarga la página.');
+      if (!actorId) throw new Error('Usuario no identificado. Recarga la página.');
+      return reviewService.resolveReview(orgId, actorId, reviewId, decision, notes, originalStoragePath);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: REVIEW_KEYS.all });
     },

@@ -131,6 +131,35 @@
     }
 }
 
+/* ─── Shared form control style ────────────────────────────────────────────── */
+.form-input {
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid #e5e7eb; /* gray-200 */
+  background-color: #ffffff;
+  padding: 0.625rem 1rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #111827; /* gray-900 */
+  outline: none;
+  transition: border-color 150ms, box-shadow 150ms;
+  appearance: none;
+}
+
+.form-input::placeholder {
+  color: #9ca3af; /* gray-400 */
+}
+
+.form-input:focus {
+  border-color: #a5b4fc; /* brand-300 */
+  box-shadow: 0 0 0 3px rgba(165, 180, 252, 0.25);
+}
+
+.form-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* TipTap Editor Styles */
 .ProseMirror {
   outline: none;

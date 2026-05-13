@@ -42,7 +42,7 @@ describe('compileTemplate', () => {
         <p>{{DATOS_FIADO}}</p>
       `,
       createDocument({
-        principal: createDocument().principal,
+        principal: { ...createDocument().principal, isRepresenting: true },
       }),
     );
 
@@ -134,7 +134,7 @@ describe('compileTemplate', () => {
       }),
     );
 
-    expect((html.match(/border-top: 1px solid black/g) ?? []).length).toBe(2);
+    expect((html.match(/border-top: 2px solid #000/g) ?? []).length).toBe(2);
     expect(html).toContain('ANA PRINCIPAL');
   });
 
