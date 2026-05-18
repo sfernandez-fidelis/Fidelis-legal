@@ -7,7 +7,9 @@ import {
   Download,
   Eye,
   FileText,
+  HelpCircle,
   Loader2,
+  MessageSquareWarning,
   RotateCcw,
   ShieldCheck,
   User,
@@ -27,6 +29,7 @@ export function LegalReviewPage() {
   const [reviewNotes, setReviewNotes] = useState('');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const reviewsQuery = useReviewsQuery(activeTab);
   const resolveMutation = useResolveReview();
@@ -35,16 +38,28 @@ export function LegalReviewPage() {
     { key: 'pending_review', label: 'Pendientes', icon: AlertTriangle },
     { key: 'confirmed', label: 'Confirmados', icon: X },
     { key: 'restored', label: 'Restaurados', icon: CheckCircle2 },
+    { key: 'needs_info', label: 'Devueltos', icon: MessageSquareWarning as any },
     { key: 'all', label: 'Todos', icon: FileText },
   ];
 
-  const pendingItems = reviewsQuery.data?.filter(
+  const filteredReviews = (reviewsQuery.data ?? []).filter((review) => {
+    if (!searchQuery.trim()) return true;
+    const term = searchQuery.toLowerCase();
+    return (
+      review.originalFileName.toLowerCase().includes(term) ||
+      (review.clientName && review.clientName.toLowerCase().includes(term)) ||
+      (review.agentName && review.agentName.toLowerCase().includes(term)) ||
+      (review.policyNumber && review.policyNumber.toLowerCase().includes(term))
+    );
+  });
+
+  const pendingItems = filteredReviews.filter(
     (r) => r.status === 'pending_review',
   );
   const pendingCount =
     activeTab === 'pending_review'
-      ? reviewsQuery.data?.length ?? 0
-      : (pendingItems?.length ?? 0);
+      ? filteredReviews.length
+      : pendingItems.length;
 
   const handlePreview = async (review: DocumentReview) => {
     setLoadingPreview(true);
@@ -70,8 +85,13 @@ export function LegalReviewPage() {
     }
   };
 
-  const handleResolve = async (decision: 'confirmed' | 'restored') => {
+  const handleResolve = async (decision: 'confirmed' | 'restored' | 'needs_info') => {
     if (!selectedReview) return;
+    
+    if (decision === 'needs_info' && !reviewNotes.trim()) {
+      toast.error('Debe ingresar una nota explicando qué información falta');
+      return;
+    }
 
     try {
       await resolveMutation.mutateAsync({
@@ -81,11 +101,12 @@ export function LegalReviewPage() {
         originalStoragePath: selectedReview.originalStoragePath,
       });
 
-      toast.success(
-        decision === 'confirmed'
-          ? 'Rechazo confirmado — el documento queda marcado'
-          : 'Documento restaurado — rechazo removido',
-      );
+      const messages = {
+        confirmed: 'Rechazo confirmado — el documento queda marcado',
+        restored: 'Documento restaurado — rechazo removido',
+        needs_info: 'Documento devuelto a Archivo para más información'
+      };
+      toast.success(messages[decision]);
 
       setSelectedReview(null);
       setPreviewUrl(null);
@@ -114,12 +135,21 @@ export function LegalReviewPage() {
             restaurar.
           </p>
         </div>
-        {pendingCount > 0 && (
-          <div className="flex items-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-700">
-            <AlertTriangle size={16} />
-            {pendingCount} pendiente{pendingCount !== 1 ? 's' : ''}
-          </div>
-        )}
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <input
+            type="text"
+            placeholder="Buscar por documento, cliente, agente o póliza..."
+            className="rounded-2xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-100 sm:min-w-[280px]"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {pendingCount > 0 && (
+            <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-700">
+              <AlertTriangle size={16} />
+              {pendingCount} pendiente{pendingCount !== 1 ? 's' : ''}
+            </div>
+          )}
+        </div>
       </header>
 
       {/* Tabs */}
@@ -162,7 +192,7 @@ export function LegalReviewPage() {
         />
       )}
 
-      {reviewsQuery.data && reviewsQuery.data.length === 0 && (
+      {reviewsQuery.data && filteredReviews.length === 0 && (
         <div className="flex flex-col items-center justify-center rounded-3xl border border-gray-100 bg-white py-20 text-center">
           <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-50 text-brand-600">
             <ShieldCheck size={32} />
@@ -176,9 +206,9 @@ export function LegalReviewPage() {
         </div>
       )}
 
-      {reviewsQuery.data && reviewsQuery.data.length > 0 && (
+      {filteredReviews.length > 0 && (
         <div className="grid gap-4">
-          {reviewsQuery.data.map((review) => (
+          {filteredReviews.map((review) => (
             <ReviewCard
               key={review.id}
               loadingPreview={loadingPreview}
@@ -239,6 +269,9 @@ export function LegalReviewPage() {
                 )}
                 {selectedReview.clientName && (
                   <InfoCell label="Cliente / Fiado" value={selectedReview.clientName} />
+                )}
+                {selectedReview.policyNumber && (
+                  <InfoCell label="Número de Póliza/Fianza" value={selectedReview.policyNumber} />
                 )}
               </div>
 
@@ -303,7 +336,7 @@ export function LegalReviewPage() {
               {previewUrl && (
                 <div className="relative overflow-hidden rounded-2xl border border-gray-200">
                   <iframe
-                    className="h-[400px] w-full"
+                    className="h-[70vh] min-h-[500px] w-full"
                     src={previewUrl}
                     title="Vista previa del PDF"
                   />
@@ -345,13 +378,17 @@ export function LegalReviewPage() {
                   className={`rounded-2xl p-5 ${
                     selectedReview.status === 'confirmed'
                       ? 'bg-red-50 text-red-800'
-                      : 'bg-green-50 text-green-800'
+                      : selectedReview.status === 'needs_info'
+                        ? 'bg-blue-50 text-blue-800'
+                        : 'bg-green-50 text-green-800'
                   }`}
                 >
-                  <p className="text-sm font-semibold">
+                  <p className="text-sm font-semibold flex items-center gap-2">
                     {selectedReview.status === 'confirmed'
-                      ? '✕ Rechazo confirmado'
-                      : '✓ Documento restaurado'}
+                      ? <><X size={16}/> Rechazo confirmado</>
+                      : selectedReview.status === 'needs_info'
+                        ? <><MessageSquareWarning size={16}/> Devuelto a archivo</>
+                        : <><CheckCircle2 size={16}/> Documento restaurado</>}
                   </p>
                   {selectedReview.reviewedByName && (
                     <p className="mt-1 text-xs opacity-80">
@@ -387,6 +424,19 @@ export function LegalReviewPage() {
                     <RotateCcw size={16} />
                   )}
                   Quitar rechazo
+                </button>
+                <button
+                  className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={resolveMutation.isPending}
+                  onClick={() => handleResolve('needs_info')}
+                  type="button"
+                >
+                  {resolveMutation.isPending ? (
+                    <Loader2 className="animate-spin" size={16} />
+                  ) : (
+                    <MessageSquareWarning size={16} />
+                  )}
+                  Devolver a Archivo
                 </button>
                 <button
                   className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-red-600 px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-red-200 transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
@@ -452,7 +502,9 @@ function ReviewCard({
                 ? 'bg-amber-50 text-amber-600'
                 : review.status === 'confirmed'
                   ? 'bg-red-50 text-red-500'
-                  : 'bg-green-50 text-green-500'
+                  : review.status === 'needs_info'
+                    ? 'bg-blue-50 text-blue-500'
+                    : 'bg-green-50 text-green-500'
             }`}
           >
             <FileText size={24} />
@@ -480,6 +532,12 @@ function ReviewCard({
                 <>
                   <span>•</span>
                   <span>{review.clientName}</span>
+                </>
+              )}
+              {review.policyNumber && (
+                <>
+                  <span>•</span>
+                  <span className="font-medium text-brand-600">Póliza: {review.policyNumber}</span>
                 </>
               )}
               {review.rejectedByName && (
@@ -559,6 +617,13 @@ function ReviewStatusBadge({ status }: { status: string }) {
         <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-600">
           <CheckCircle2 size={12} />
           Restaurado
+        </span>
+      );
+    case 'needs_info':
+      return (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-600">
+          <HelpCircle size={12} />
+          Requiere Info
         </span>
       );
     default:

@@ -2,16 +2,12 @@ import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { CounterGuaranteeData, ContractType } from '../../types';
 import { compileTemplate } from '../templateEngine';
+import { getTemplateShortLabel } from '../../features/templates/templateLabels';
 
 function buildBaseFileName(data: CounterGuaranteeData) {
-  const typeLabel =
-    data.type === ContractType.COUNTER_GUARANTEE_PRIVATE
-      ? 'Documento Privado'
-      : data.type === ContractType.COUNTER_GUARANTEE_PUBLIC
-        ? 'Escritura Pública'
-        : 'Hipoteca';
-  const policiesLabel = data.policies.map((policy) => policy.number).join(' y ');
-  const entityLabel = data.principal.entityName || data.principal.name || 'Documento legal';
+  const typeLabel = getTemplateShortLabel(data.type);
+  const policiesLabel = (data.policies ?? []).map((policy) => policy.number).filter(Boolean).join(' y ');
+  const entityLabel = data.principal?.entityName || data.principal?.name || 'Documento legal';
   return `${entityLabel} - ${typeLabel}${policiesLabel ? ` - ${policiesLabel}` : ''}`.replace(/[\\/:*?"<>|]+/g, '').trim();
 }
 

@@ -64,7 +64,7 @@ export function useResolveReview() {
       originalStoragePath,
     }: {
       reviewId: string;
-      decision: 'confirmed' | 'restored';
+      decision: 'confirmed' | 'restored' | 'needs_info';
       notes?: string;
       originalStoragePath?: string;
     }) => {

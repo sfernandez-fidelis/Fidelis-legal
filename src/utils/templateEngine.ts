@@ -169,5 +169,109 @@ export function compileTemplate(
   compiled = compiled.replace(/\{\{FIRMAS\}\}/g, firmasStr);
   compiled = compiled.replace(/\{\{AUTENTICA\}\}/g, buildAuthenticaTemplate(data, dateStr, firmasStr, mode));
 
+  // ── New variable replacements for expanded document types ──
+
+  // Accesorio Múltiple
+  if (data.maxGuaranteeAmount || data.maxGuaranteeAmountInWords) {
+    const maxStr = decorateVariableHtml(
+      `<b>${data.maxGuaranteeAmountInWords || ''} (Q.${(data.maxGuaranteeAmount ?? 0).toFixed(2)})</b>`,
+      mode,
+    );
+    compiled = compiled.replace(/\{\{MONTO_MAXIMO\}\}/g, maxStr);
+  } else {
+    compiled = compiled.replace(/\{\{MONTO_MAXIMO\}\}/g, '[MONTO MÁXIMO]');
+  }
+
+  // Movable assets
+  if (data.movableAssetsData) {
+    const ma = data.movableAssetsData;
+    compiled = compiled.replace(/\{\{BIENES_MUEBLES\}\}/g, decorateVariableHtml(ma.assetsDescription || '[DESCRIPCIÓN DE BIENES]', mode));
+    compiled = compiled.replace(/\{\{VALOR_BIENES\}\}/g, decorateVariableHtml(ma.assetsValue || '[VALOR]', mode));
+    compiled = compiled.replace(/\{\{UBICACION_BIENES\}\}/g, decorateVariableHtml(ma.assetsLocation || '[UBICACIÓN]', mode));
+  } else {
+    compiled = compiled.replace(/\{\{BIENES_MUEBLES\}\}/g, '[DESCRIPCIÓN DE BIENES]');
+    compiled = compiled.replace(/\{\{VALOR_BIENES\}\}/g, '[VALOR DE BIENES]');
+    compiled = compiled.replace(/\{\{UBICACION_BIENES\}\}/g, '[UBICACIÓN DE BIENES]');
+  }
+
+  // Property (finca)
+  if (data.propertyData) {
+    const pd = data.propertyData;
+    const fincaStr = decorateVariableHtml(
+      `<b>${pd.registryName}</b>, al número de finca <b>${pd.fincaNumber}</b>, folio <b>${pd.fincaFolio}</b>, del libro <b>${pd.fincaBook}</b> de <b>${pd.fincaDepartment}</b>`,
+      mode,
+    );
+    compiled = compiled.replace(/\{\{DATOS_FINCA\}\}/g, fincaStr);
+  } else {
+    compiled = compiled.replace(/\{\{DATOS_FINCA\}\}/g, '[DATOS DE LA FINCA]');
+  }
+
+  // Origin document (carta de pago)
+  if (data.originDocumentData) {
+    const od = data.originDocumentData;
+    const originStr = decorateVariableHtml(
+      `<b>${od.escrituraNumber}</b>, autorizada en ${od.escrituraCity} por el Notario <b>${od.escrituraNotary}</b>, el día <b>${od.escrituraDate ? formatDateInWords(od.escrituraDate) : '[FECHA]'}</b>`,
+      mode,
+    );
+    compiled = compiled.replace(/\{\{ESCRITURA_ORIGEN\}\}/g, originStr);
+  } else {
+    compiled = compiled.replace(/\{\{ESCRITURA_ORIGEN\}\}/g, '[ESCRITURA DE ORIGEN]');
+  }
+
+  // Deposit data
+  if (data.depositData) {
+    const dd = data.depositData;
+    const depositStr = decorateVariableHtml(
+      `<b>${dd.depositAmountInWords} (Q.${dd.depositAmount.toFixed(2)})</b>, según recibo de caja No. <b>${dd.receiptNumber}</b> de fecha <b>${dd.depositDate ? formatDateInWords(dd.depositDate) : '[FECHA]'}</b>`,
+      mode,
+    );
+    compiled = compiled.replace(/\{\{DATOS_DEPOSITO\}\}/g, depositStr);
+    compiled = compiled.replace(/\{\{TASA_INTERES\}\}/g, decorateVariableHtml(`<b>${dd.interestRate || '[TASA]'}</b>`, mode));
+  } else {
+    compiled = compiled.replace(/\{\{DATOS_DEPOSITO\}\}/g, '[DATOS DEL DEPÓSITO]');
+    compiled = compiled.replace(/\{\{TASA_INTERES\}\}/g, '[TASA DE INTERÉS]');
+  }
+
+  // Claim data (finiquito)
+  if (data.claimData) {
+    const cd = data.claimData;
+    const indemStr = decorateVariableHtml(
+      `<b>${cd.indemnityAmountInWords} (Q.${cd.indemnityAmount.toFixed(2)})</b>`,
+      mode,
+    );
+    const checkStr = decorateVariableHtml(
+      `No. <b>${cd.checkNumber}</b> de fecha <b>${cd.checkDate ? formatDateInWords(cd.checkDate) : '[FECHA]'}</b>, de <b>${cd.issuingBank}</b>`,
+      mode,
+    );
+    compiled = compiled.replace(/\{\{DATOS_INDEMNIZACION\}\}/g, indemStr);
+    compiled = compiled.replace(/\{\{DATOS_CHEQUE\}\}/g, checkStr);
+    compiled = compiled.replace(/\{\{SUBROGACION_CONTRA\}\}/g, decorateVariableHtml(`<b>${cd.subrogationTarget || '[NOMBRE]'}</b>`, mode));
+  } else {
+    compiled = compiled.replace(/\{\{DATOS_INDEMNIZACION\}\}/g, '[DATOS DE INDEMNIZACIÓN]');
+    compiled = compiled.replace(/\{\{DATOS_CHEQUE\}\}/g, '[DATOS DEL CHEQUE]');
+    compiled = compiled.replace(/\{\{SUBROGACION_CONTRA\}\}/g, '[SUBROGACIÓN CONTRA]');
+  }
+
+  // Debt plan
+  if (data.debtPlanData) {
+    const dp = data.debtPlanData;
+    compiled = compiled.replace(/\{\{MONTO_DEUDA\}\}/g, decorateVariableHtml(`<b>${dp.debtAmountInWords} (Q.${dp.debtAmount.toFixed(2)})</b>`, mode));
+    compiled = compiled.replace(/\{\{PLAZO\}\}/g, decorateVariableHtml(`<b>${dp.termMonths} meses</b>`, mode));
+    compiled = compiled.replace(/\{\{FECHA_INICIO\}\}/g, decorateVariableHtml(`<b>${dp.startDate ? formatDateInWords(dp.startDate) : '[FECHA INICIO]'}</b>`, mode));
+    compiled = compiled.replace(/\{\{FECHA_VENCIMIENTO\}\}/g, decorateVariableHtml(`<b>${dp.endDate ? formatDateInWords(dp.endDate) : '[FECHA VENCIMIENTO]'}</b>`, mode));
+    const cuotasStr = decorateVariableHtml(
+      `<b>${dp.numberOfPayments}</b> pagos nivelados, mensuales y consecutivos por la cantidad de <b>${dp.paymentAmountInWords} (Q.${dp.paymentAmount.toFixed(2)})</b> cada uno, pagaderos ${dp.paymentDay || 'dentro de los últimos cinco días de cada mes'}`,
+      mode,
+    );
+    compiled = compiled.replace(/\{\{DATOS_CUOTAS\}\}/g, cuotasStr);
+    compiled = compiled.replace(/\{\{TASA_INTERES\}\}/g, decorateVariableHtml(`<b>${dp.interestRate || '[TASA]'}</b>`, mode));
+  } else {
+    compiled = compiled.replace(/\{\{MONTO_DEUDA\}\}/g, '[MONTO DE DEUDA]');
+    compiled = compiled.replace(/\{\{PLAZO\}\}/g, '[PLAZO]');
+    compiled = compiled.replace(/\{\{FECHA_INICIO\}\}/g, '[FECHA INICIO]');
+    compiled = compiled.replace(/\{\{FECHA_VENCIMIENTO\}\}/g, '[FECHA VENCIMIENTO]');
+    compiled = compiled.replace(/\{\{DATOS_CUOTAS\}\}/g, '[DATOS DE CUOTAS]');
+  }
+
   return includeInsertionSlots ? injectPreviewInsertions(compiled, data.previewInsertions, mode) : compiled;
 }

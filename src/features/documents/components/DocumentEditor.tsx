@@ -1,15 +1,22 @@
 import { format } from 'date-fns';
 import { AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, Copy, FileText, FolderArchive, Loader2, Plus, RotateCw, Save } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import PartyForm from '../../../components/forms/PartyForm';
 import PolicyForm from '../../../components/forms/PolicyForm';
+import { PropertyForm, createEmptyPropertyData } from '../../../components/forms/PropertyForm';
+import { DepositForm, createEmptyDepositData } from '../../../components/forms/DepositForm';
+import { ClaimForm, createEmptyClaimData } from '../../../components/forms/ClaimForm';
+import { DebtPlanForm, createEmptyDebtPlanData } from '../../../components/forms/DebtPlanForm';
+import { MovableAssetsForm, createEmptyMovableAssetsData } from '../../../components/forms/MovableAssetsForm';
+import { OriginDocumentForm, createEmptyOriginDocumentData } from '../../../components/forms/OriginDocumentForm';
 import LivePreview from '../../../components/LivePreview';
 import { DateInput } from '../../../shared/components/DateInput';
 import type { ContactData, CounterGuaranteeData, ContractType, PartyDetails } from '../../../types';
 import { DocumentStatusBadge } from './DocumentStatusBadge';
 import { createEmptyParty } from '../../contacts/contactUtils';
 import { usePermissions } from '../../auth/hooks/usePermissions';
+import { getDocumentTypeConfig, type FormSection } from '../documentTypeConfig';
 
 export type SaveIndicatorState = 'saving' | 'saved' | 'unsaved';
 
@@ -31,7 +38,7 @@ interface DocumentEditorProps {
   onSaveContact?: (party: PartyDetails, role: 'principal' | 'guarantor') => Promise<void> | void;
 }
 
-const steps = ['Resumen', 'Partes', 'Pólizas', 'Revisión final'] as const;
+
 
 function buildInitialData(initialType: ContractType, initialData?: CounterGuaranteeData): CounterGuaranteeData {
   if (initialData) {
@@ -52,6 +59,126 @@ function buildInitialData(initialType: ContractType, initialData?: CounterGuaran
     signatureNames: [''],
     createdAt: new Date().toISOString(),
   };
+}
+
+interface SectionContext {
+  data: CounterGuaranteeData;
+  updateData: (next: CounterGuaranteeData) => void;
+  contacts: ContactData[];
+  permissions: { canEditContent: boolean };
+  addGuarantor: () => void;
+  addPolicy: () => void;
+  addSignature: () => void;
+  onSaveContact?: (party: PartyDetails, role: 'principal' | 'guarantor') => Promise<void> | void;
+}
+
+function renderSection(section: FormSection, ctx: SectionContext): ReactNode {
+  const { data, updateData, contacts, permissions, addGuarantor, addPolicy, addSignature, onSaveContact } = ctx;
+
+  switch (section) {
+    case 'general':
+      return (
+        <div key="general" className="grid gap-4 md:grid-cols-2">
+          <Field label="Título del documento">
+            <input className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500" onChange={(e) => updateData({ ...data, title: e.target.value })} placeholder="Use un título orientado al cliente" value={data.title ?? ''} />
+          </Field>
+          <Field label="Fecha del contrato">
+            <DateInput className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500" onChange={(isoDate) => updateData({ ...data, contractDate: isoDate })} value={data.contractDate} />
+          </Field>
+          <Field label="Beneficiario">
+            <input className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500" onChange={(e) => updateData({ ...data, beneficiaryName: e.target.value })} placeholder="Nombre del beneficiario" value={data.beneficiaryName} />
+          </Field>
+          <Field label="Notificaciones">
+            <textarea className="min-h-28 w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500" onChange={(e) => updateData({ ...data, notificationAddress: e.target.value })} placeholder="Dirección de notificación" value={data.notificationAddress} />
+          </Field>
+        </div>
+      );
+
+    case 'principal':
+      return (
+        <PartyForm key="principal" contacts={contacts} onChange={(principal) => updateData({ ...data, principal })} onSaveContact={(party) => onSaveContact?.(party, 'principal')} party={data.principal} suggestionTypes={['principal', 'representative', 'entity', 'notary']} title="Parte principal" />
+      );
+
+    case 'guarantors':
+      return (
+        <div key="guarantors" className="space-y-5">
+          <div className="flex items-center justify-between">
+            <div><h3 className="text-lg font-medium text-stone-900">Fiadores adicionales</h3><p className="text-sm text-stone-500">Mantenga las partes secundarias estructuradas.</p></div>
+            <button className="rounded-full bg-brand-50 px-4 py-2 text-sm font-medium text-brand-700 transition hover:bg-brand-100" disabled={!permissions.canEditContent} onClick={addGuarantor} type="button"><span className="inline-flex items-center gap-2"><Plus size={15} /> Agregar fiador</span></button>
+          </div>
+          {data.guarantors.map((guarantor, index) => (
+            <PartyForm contacts={contacts} key={`guarantor-${index}`} onChange={(p) => { const g = [...data.guarantors]; g[index] = p; updateData({ ...data, guarantors: g }); }} onSaveContact={(p) => onSaveContact?.(p, 'guarantor')} onRemove={() => updateData({ ...data, guarantors: data.guarantors.filter((_, i) => i !== index) })} party={guarantor} suggestionTypes={['guarantor', 'representative', 'entity', 'notary']} title={`Fiador ${index + 1}`} />
+          ))}
+        </div>
+      );
+
+    case 'policies':
+      return (
+        <div key="policies" className="space-y-5">
+          <div className="flex items-center justify-between">
+            <div><h3 className="text-lg font-medium text-stone-900">Pólizas</h3><p className="text-sm text-stone-500">Cada póliza permanece consultable.</p></div>
+            <button className="rounded-full bg-brand-50 px-4 py-2 text-sm font-medium text-brand-700 transition hover:bg-brand-100" disabled={!permissions.canEditContent} onClick={addPolicy} type="button"><span className="inline-flex items-center gap-2"><Plus size={15} /> Agregar póliza</span></button>
+          </div>
+          {data.policies.map((policy, index) => (
+            <PolicyForm canRemove={data.policies.length > 1} key={`policy-${index}`} onChange={(p) => { const ps = [...data.policies]; ps[index] = p; updateData({ ...data, policies: ps }); }} onRemove={() => updateData({ ...data, policies: data.policies.filter((_, i) => i !== index) })} policy={policy} />
+          ))}
+        </div>
+      );
+
+    case 'property':
+      return <PropertyForm key="property" data={data.propertyData ?? createEmptyPropertyData()} onChange={(propertyData) => updateData({ ...data, propertyData })} />;
+
+    case 'movableAssets':
+      return <MovableAssetsForm key="movableAssets" data={data.movableAssetsData ?? createEmptyMovableAssetsData()} onChange={(movableAssetsData) => updateData({ ...data, movableAssetsData })} />;
+
+    case 'deposit':
+      return <DepositForm key="deposit" data={data.depositData ?? createEmptyDepositData()} onChange={(depositData) => updateData({ ...data, depositData })} />;
+
+    case 'claim':
+      return <ClaimForm key="claim" data={data.claimData ?? createEmptyClaimData()} onChange={(claimData) => updateData({ ...data, claimData })} />;
+
+    case 'debtPlan':
+      return <DebtPlanForm key="debtPlan" data={data.debtPlanData ?? createEmptyDebtPlanData()} onChange={(debtPlanData) => updateData({ ...data, debtPlanData })} />;
+
+    case 'originDocument':
+      return <OriginDocumentForm key="originDocument" data={data.originDocumentData ?? createEmptyOriginDocumentData()} onChange={(originDocumentData) => updateData({ ...data, originDocumentData })} />;
+
+    case 'maxAmount':
+      return (
+        <div key="maxAmount" className="rounded-3xl border border-stone-200 bg-stone-50 p-5 space-y-4">
+          <h3 className="text-lg font-medium text-stone-900">Monto máximo acumulado</h3>
+          <p className="text-sm text-stone-500">Techo de emisión de pólizas al amparo de este accesorio.</p>
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field label="Monto (Q.)"><input className="w-full rounded-xl border border-stone-200 bg-white px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500" type="number" onChange={(e) => updateData({ ...data, maxGuaranteeAmount: parseFloat(e.target.value) || 0 })} value={data.maxGuaranteeAmount || ''} placeholder="500000" /></Field>
+            <Field label="Monto en letras"><input className="w-full rounded-xl border border-stone-200 bg-white px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500" onChange={(e) => updateData({ ...data, maxGuaranteeAmountInWords: e.target.value })} value={data.maxGuaranteeAmountInWords || ''} placeholder="Quinientos mil quetzales" /></Field>
+          </div>
+        </div>
+      );
+
+    case 'signatures':
+      return (
+        <div key="signatures" className="rounded-3xl border border-stone-200 bg-stone-50 p-5">
+          <h3 className="text-lg font-medium text-stone-900">Bloque de firmas</h3>
+          <p className="mt-1 text-sm text-stone-500">Finalice los firmantes y mueva el documento a su siguiente hito.</p>
+          <div className="mt-4 space-y-3">
+            {data.signatureNames.map((name, index) => (
+              <div className="flex gap-3" key={`signature-${index}`}>
+                <input className="w-full rounded-xl border border-stone-200 bg-white px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500" onChange={(e) => { const s = [...data.signatureNames]; s[index] = e.target.value; updateData({ ...data, signatureNames: s }); }} placeholder="Nombre del firmante" value={name} />
+                <button className="rounded-xl border border-stone-200 px-4 py-3 text-sm text-stone-600 transition hover:bg-stone-100" disabled={data.signatureNames.length === 1} onClick={() => updateData({ ...data, signatureNames: data.signatureNames.filter((_, i) => i !== index) })} type="button">Eliminar</button>
+              </div>
+            ))}
+            <button className="rounded-xl border border-dashed border-stone-300 px-4 py-3 text-sm text-stone-600 transition hover:bg-white" disabled={!permissions.canEditContent} onClick={addSignature} type="button">Agregar firmante</button>
+          </div>
+        </div>
+      );
+
+    default:
+      return null;
+  }
+}
+
+function renderSectionsForStep(sections: FormSection[], ctx: SectionContext): ReactNode {
+  return <div className="space-y-5">{sections.map((s) => renderSection(s, ctx))}</div>;
 }
 
 function SaveIndicator({ state }: { state: SaveIndicatorState }) {
@@ -99,6 +226,8 @@ export function DocumentEditor({
   const permissions = usePermissions();
   const [step, setStep] = useState(0);
   const [data, setData] = useState<CounterGuaranteeData>(() => buildInitialData(initialType, initialData));
+  const typeConfig = useMemo(() => getDocumentTypeConfig(data.type), [data.type]);
+  const wizardSteps = typeConfig.steps;
 
   useEffect(() => {
     setData(buildInitialData(initialType, initialData));
@@ -172,191 +301,32 @@ export function DocumentEditor({
             </div>
           </div>
 
-          <div className="mt-5 grid gap-2 md:grid-cols-4">
-            {steps.map((item, index) => (
+          <div className="mt-5 grid gap-2" style={{ gridTemplateColumns: `repeat(${wizardSteps.length}, minmax(0, 1fr))` }}>
+            {wizardSteps.map((item, index) => (
               <button
                 className={`rounded-2xl border px-4 py-3 text-left transition ${
                   step === index
                     ? 'border-stone-900 bg-stone-900 text-white'
                     : 'border-stone-200 bg-white text-stone-500 hover:border-stone-300'
                 }`}
-                key={item}
+                key={item.label}
                 onClick={() => {
                   setStep(index);
                 }}
                 type="button"
               >
                 <p className="text-xs uppercase tracking-[0.2em]">{String(index + 1).padStart(2, '0')}</p>
-                <p className="mt-1 text-sm font-medium">{item}</p>
+                <p className="mt-1 text-sm font-medium">{item.label}</p>
               </button>
             ))}
           </div>
         </div>
 
         <div className="space-y-6 p-6">
-          {step === 0 ? (
-            <div className="grid gap-4 md:grid-cols-2">
-              <Field label="Título del documento">
-                <input
-                  className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500"
-                  onChange={(event) => updateData({ ...data, title: event.target.value })}
-                  placeholder="Use un título orientado al cliente"
-                  value={data.title ?? ''}
-                />
-              </Field>
-              <Field label="Fecha del contrato">
-                <DateInput
-                  className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500"
-                  onChange={(isoDate) => updateData({ ...data, contractDate: isoDate })}
-                  value={data.contractDate}
-                />
-              </Field>
-              <Field label="Beneficiario">
-                <input
-                  className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500"
-                  onChange={(event) => updateData({ ...data, beneficiaryName: event.target.value })}
-                  placeholder="Nombre del beneficiario"
-                  value={data.beneficiaryName}
-                />
-              </Field>
-              <Field label="Notificaciones">
-                <textarea
-                  className="min-h-28 w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500"
-                  onChange={(event) => updateData({ ...data, notificationAddress: event.target.value })}
-                  placeholder="Dirección de notificación"
-                  value={data.notificationAddress}
-                />
-              </Field>
-            </div>
-          ) : null}
-
-          {step === 1 ? (
-            <div className="space-y-5">
-              <PartyForm
-                contacts={contacts}
-                onChange={(principal) => updateData({ ...data, principal })}
-                onSaveContact={(party) => onSaveContact?.(party, 'principal')}
-                party={data.principal}
-                suggestionTypes={['principal', 'representative', 'entity', 'notary']}
-                title="Parte principal"
-              />
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-medium text-stone-900">Fiadores adicionales</h3>
-                  <p className="text-sm text-stone-500">Mantenga las partes secundarias estructuradas para futuras revisiones.</p>
-                </div>
-                <button
-                  className="rounded-full bg-brand-50 px-4 py-2 text-sm font-medium text-brand-700 transition hover:bg-brand-100"
-                  disabled={!permissions.canEditContent}
-                  onClick={addGuarantor}
-                  type="button"
-                >
-                  <span className="inline-flex items-center gap-2">
-                    <Plus size={15} />
-                    Agregar fiador
-                  </span>
-                </button>
-              </div>
-              {data.guarantors.map((guarantor, index) => (
-                <PartyForm
-                  contacts={contacts}
-                  key={`guarantor-${index}`}
-                  onChange={(nextParty) => {
-                    const guarantors = [...data.guarantors];
-                    guarantors[index] = nextParty;
-                    updateData({ ...data, guarantors });
-                  }}
-                  onSaveContact={(party) => onSaveContact?.(party, 'guarantor')}
-                  onRemove={() => updateData({ ...data, guarantors: data.guarantors.filter((_, itemIndex) => itemIndex !== index) })}
-                  party={guarantor}
-                  suggestionTypes={['guarantor', 'representative', 'entity', 'notary']}
-                  title={`Fiador ${index + 1}`}
-                />
-              ))}
-            </div>
-          ) : null}
-
-          {step === 2 ? (
-            <div className="space-y-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-medium text-stone-900">Pólizas</h3>
-                  <p className="text-sm text-stone-500">Cada póliza permanece consultable para búsqueda y reportes.</p>
-                </div>
-                <button
-                  className="rounded-full bg-brand-50 px-4 py-2 text-sm font-medium text-brand-700 transition hover:bg-brand-100"
-                  disabled={!permissions.canEditContent}
-                  onClick={addPolicy}
-                  type="button"
-                >
-                  <span className="inline-flex items-center gap-2">
-                    <Plus size={15} />
-                    Agregar póliza
-                  </span>
-                </button>
-              </div>
-              {data.policies.map((policy, index) => (
-                <PolicyForm
-                  canRemove={data.policies.length > 1}
-                  key={`policy-${index}`}
-                  onChange={(nextPolicy) => {
-                    const policies = [...data.policies];
-                    policies[index] = nextPolicy;
-                    updateData({ ...data, policies });
-                  }}
-                  onRemove={() => updateData({ ...data, policies: data.policies.filter((_, itemIndex) => itemIndex !== index) })}
-                  policy={policy}
-                />
-              ))}
-            </div>
-          ) : null}
-
-          {step === 3 ? (
-            <div className="space-y-5">
-              <div className="rounded-3xl border border-stone-200 bg-stone-50 p-5">
-                <h3 className="text-lg font-medium text-stone-900">Bloque de firmas</h3>
-                <p className="mt-1 text-sm text-stone-500">Finalice los firmantes y mueva el documento a su siguiente hito.</p>
-                <div className="mt-4 space-y-3">
-                  {data.signatureNames.map((name, index) => (
-                    <div className="flex gap-3" key={`signature-${index}`}>
-                      <input
-                        className="w-full rounded-xl border border-stone-200 bg-white px-4 py-3 outline-none focus:ring-2 focus:ring-brand-500"
-                        onChange={(event) => {
-                          const signatureNames = [...data.signatureNames];
-                          signatureNames[index] = event.target.value;
-                          updateData({ ...data, signatureNames });
-                        }}
-                        placeholder="Nombre del firmante"
-                        value={name}
-                      />
-                      <button
-                        className="rounded-xl border border-stone-200 px-4 py-3 text-sm text-stone-600 transition hover:bg-stone-100"
-                        disabled={data.signatureNames.length === 1}
-                        onClick={() =>
-                          updateData({
-                            ...data,
-                            signatureNames: data.signatureNames.filter((_, itemIndex) => itemIndex !== index),
-                          })
-                        }
-                        type="button"
-                      >
-                        Eliminar
-                      </button>
-                    </div>
-                  ))}
-                  <button
-                    className="rounded-xl border border-dashed border-stone-300 px-4 py-3 text-sm text-stone-600 transition hover:bg-white"
-                    disabled={!permissions.canEditContent}
-                    onClick={addSignature}
-                    type="button"
-                  >
-                    Agregar firmante
-                  </button>
-                </div>
-              </div>
-
-            </div>
-          ) : null}
+          {renderSectionsForStep(wizardSteps[step]?.sections ?? [], {
+            data, updateData, contacts, permissions, addGuarantor, addPolicy, addSignature,
+            onSaveContact,
+          })}
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-stone-200 bg-stone-50 px-6 py-5">
           <button
@@ -404,11 +374,13 @@ export function DocumentEditor({
             </button>
             <button
               className="rounded-xl bg-stone-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-black disabled:opacity-50"
-              disabled={step === steps.length - 1}
+              disabled={step === wizardSteps.length - 1}
               onClick={() => {
-                const nextStep = Math.min(steps.length - 1, step + 1);
+                const nextStep = Math.min(wizardSteps.length - 1, step + 1);
                 setStep(nextStep);
-                if (nextStep === 3 && data.signatureNames.length === 1 && !data.signatureNames[0]) {
+                const isLastStep = nextStep === wizardSteps.length - 1;
+                const lastStepHasSignatures = wizardSteps[nextStep]?.sections.includes('signatures');
+                if (isLastStep && lastStepHasSignatures && data.signatureNames.length === 1 && !data.signatureNames[0]) {
                   const defaultSignatures = [
                     data.principal.name,
                     ...data.guarantors.map((g) => g.name),

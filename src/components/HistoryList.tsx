@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
 import { CounterGuaranteeData, ContractType } from '../types';
+import { getTemplateShortLabel } from '../features/templates/templateLabels';
 
 interface Props {
   items: CounterGuaranteeData[];
@@ -41,7 +42,7 @@ export default function HistoryList({ items, onDelete, onDownloadPDF, onDownload
                   to={`/documents/${item.id}`}
                 >
                   {item.principal.entityName || item.principal.name} -
-                  {item.type === ContractType.COUNTER_GUARANTEE_PRIVATE ? 'Documento Privado' : 'Escritura Pública'}-{' '}
+                  {getTemplateShortLabel(item.type)}-{' '}
                   {item.policies.map((policy) => policy.number).join(' y ')}
                 </Link>
               </div>

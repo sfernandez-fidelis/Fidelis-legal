@@ -1,7 +1,16 @@
 export enum ContractType {
   COUNTER_GUARANTEE_PRIVATE = 'COUNTER_GUARANTEE_PRIVATE',
+  COUNTER_GUARANTEE_PRIVATE_ENTITY = 'COUNTER_GUARANTEE_PRIVATE_ENTITY',
   COUNTER_GUARANTEE_PUBLIC = 'COUNTER_GUARANTEE_PUBLIC',
+  COUNTER_GUARANTEE_MULTIPLE = 'COUNTER_GUARANTEE_MULTIPLE',
+  MOVABLE_GUARANTEE = 'MOVABLE_GUARANTEE',
   MORTGAGE_GUARANTEE = 'MORTGAGE_GUARANTEE',
+  PAYMENT_RELEASE = 'PAYMENT_RELEASE',
+  FUND_DEPOSIT = 'FUND_DEPOSIT',
+  CLAIM_SETTLEMENT = 'CLAIM_SETTLEMENT',
+  FUND_RETURN_INDIVIDUAL = 'FUND_RETURN_INDIVIDUAL',
+  FUND_RETURN_ENTITY = 'FUND_RETURN_ENTITY',
+  DEBT_RECOGNITION = 'DEBT_RECOGNITION',
 }
 
 export interface PartyDetails {
@@ -62,6 +71,62 @@ export interface DocumentPreviewInsertion {
   preserveEmpty?: boolean;
 }
 
+export interface PropertyData {
+  fincaNumber: string;
+  fincaFolio: string;
+  fincaBook: string;
+  fincaDepartment: string;
+  registryName: string;
+  propertyDescription: string;
+  propertyValue: string;
+  propertyValueInWords: string;
+  mortgageInscription: string;
+}
+
+export interface DepositData {
+  depositAmount: number;
+  depositAmountInWords: string;
+  depositDate: string;
+  receiptNumber: string;
+  interestRate: string;
+}
+
+export interface ClaimData {
+  indemnityAmount: number;
+  indemnityAmountInWords: string;
+  checkNumber: string;
+  checkDate: string;
+  issuingBank: string;
+  subrogationTarget: string;
+}
+
+export interface DebtPlanData {
+  debtAmount: number;
+  debtAmountInWords: string;
+  termMonths: number;
+  startDate: string;
+  endDate: string;
+  numberOfPayments: number;
+  paymentAmount: number;
+  paymentAmountInWords: string;
+  interestRate: string;
+  paymentDay: string;
+}
+
+export interface MovableAssetsData {
+  assetsDescription: string;
+  assetsValue: string;
+  assetsValueInWords: string;
+  assetsLocation: string;
+}
+
+export interface OriginDocumentData {
+  escrituraNumber: string;
+  escrituraNotary: string;
+  escrituraDate: string;
+  escrituraCity: string;
+}
+
 export interface CounterGuaranteeData {
   id?: string;
   organizationId?: string;
@@ -82,6 +147,15 @@ export interface CounterGuaranteeData {
   additionalText?: string;
   previewInsertions?: DocumentPreviewInsertion[];
   signatureNames: string[];
+  propertyData?: PropertyData;
+  depositData?: DepositData;
+  claimData?: ClaimData;
+  debtPlanData?: DebtPlanData;
+  movableAssetsData?: MovableAssetsData;
+  originDocumentData?: OriginDocumentData;
+  maxGuaranteeAmount?: number;
+  maxGuaranteeAmountInWords?: string;
+  fiadoName?: string;
   createdAt: string;
   updatedAt?: string;
   archivedAt?: string | null;

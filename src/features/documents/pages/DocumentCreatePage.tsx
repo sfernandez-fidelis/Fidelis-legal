@@ -13,6 +13,8 @@ import { useAutosaveDocument } from '../hooks/useAutosaveDocument';
 import { useAppSession } from '../../auth/hooks/useSessionQuery';
 import { queryKeys } from '../../../lib/queryKeys';
 import { contactService } from '../../contacts/api/contactService';
+import { getContractTypeGroups } from '../../templates/templateLabels';
+import { getDocumentTypeConfig } from '../documentTypeConfig';
 
 function isContractType(value: string | null): value is ContractType {
   return value !== null && Object.values(ContractType).includes(value as ContractType);
@@ -34,6 +36,7 @@ export function DocumentCreatePage() {
   const saveContact = useSaveContact();
   const templateQuery = useTemplateContent(selectedType);
   const autosave = useAutosaveDocument(Boolean(draft), draft);
+  const groups = useMemo(() => getContractTypeGroups(), []);
 
   useEffect(() => {
     if (!session?.activeOrganization.id) {
@@ -112,25 +115,33 @@ export function DocumentCreatePage() {
         </Link>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-3">
-        {Object.values(ContractType).map((type) => (
-          <button
-            className={`rounded-[24px] border p-5 text-left transition ${
-              selectedType === type ? 'border-stone-900 bg-stone-900 text-white' : 'border-stone-200 bg-white text-stone-700 hover:bg-stone-50'
-            }`}
-            key={type}
-            onClick={() => setSearchParams({ type })}
-            type="button"
-          >
-            <p className="text-xs uppercase tracking-[0.25em]">{type === ContractType.COUNTER_GUARANTEE_PRIVATE ? 'Contragarantía privada' : type === ContractType.COUNTER_GUARANTEE_PUBLIC ? 'Contragarantía pública' : 'Garantía hipotecaria'}</p>
-            <p className="mt-3 text-lg font-medium">
-              {type === ContractType.COUNTER_GUARANTEE_PRIVATE
-                ? 'Documento Privado'
-                : type === ContractType.COUNTER_GUARANTEE_PUBLIC
-                  ? 'Escritura Pública'
-                  : 'Constitución Hipotecaria'}
-            </p>
-          </button>
+      <div className="space-y-4">
+        {groups.map((group) => (
+          <div key={group.label}>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.25em] text-stone-400">{group.label}</p>
+            <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+              {group.types.map((type) => {
+                const config = getDocumentTypeConfig(type);
+                return (
+                  <button
+                    className={`rounded-[20px] border p-4 text-left transition ${
+                      selectedType === type
+                        ? 'border-stone-900 bg-stone-900 text-white shadow-lg'
+                        : 'border-stone-200 bg-white text-stone-700 hover:border-stone-300 hover:bg-stone-50'
+                    }`}
+                    key={type}
+                    onClick={() => setSearchParams({ type })}
+                    type="button"
+                  >
+                    <p className="text-[10px] uppercase tracking-[0.2em] opacity-70">
+                      {config.format === 'public' ? 'Escritura pública' : 'Doc. privado'}
+                    </p>
+                    <p className="mt-1.5 text-sm font-medium leading-snug">{config.shortLabel}</p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         ))}
       </div>
 

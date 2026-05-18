@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   CloudUpload,
   FileText,
+  HelpCircle,
   Loader2,
   Trash2,
   X,
@@ -13,6 +14,7 @@ import {
 import { toast } from 'sonner';
 import { useReviewsQuery, useSubmitRejection } from '../hooks/useReviewsQuery';
 import { useInsuranceAgentsQuery } from '../hooks/useInsuranceAgents';
+import { useDocumentsQuery } from '../../documents/hooks/useDocumentsQuery';
 import { REJECTION_OPTIONS, type RejectionOptionValue } from '../api/reviewService';
 import { PageLoader } from '../../../shared/components/PageLoader';
 import { PageErrorState } from '../../../shared/components/PageErrorState';
@@ -23,6 +25,8 @@ interface RejectionFormState {
   agentId: string;
   agentName: string;
   clientName: string;
+  policyNumber: string;
+  documentId: string;
   reason: string;
   signaturePrincipalDetail: string;
   signatureGuarantorDetail: string;
@@ -35,6 +39,8 @@ const EMPTY_FORM: RejectionFormState = {
   agentId: '',
   agentName: '',
   clientName: '',
+  policyNumber: '',
+  documentId: '',
   reason: '',
   signaturePrincipalDetail: '',
   signatureGuarantorDetail: '',
@@ -44,12 +50,14 @@ const EMPTY_FORM: RejectionFormState = {
 export function ArchivoReviewPage() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [form, setForm] = useState<RejectionFormState>(EMPTY_FORM);
+  const [historySearch, setHistorySearch] = useState('');
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const reviewsQuery = useReviewsQuery('all');
   const submitMutation = useSubmitRejection();
   const agentsQuery = useInsuranceAgentsQuery();
+  const recentDocumentsQuery = useDocumentsQuery({ status: 'draft' }, 1);
 
   const setField = <K extends keyof RejectionFormState>(key: K, value: RejectionFormState[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -119,6 +127,18 @@ export function ArchivoReviewPage() {
       toast.error('Seleccione al menos un archivo PDF');
       return;
     }
+    if (!form.agentId) {
+      toast.error('Seleccione un agente de seguros');
+      return;
+    }
+    if (!form.clientName.trim()) {
+      toast.error('El nombre del cliente o fiado es obligatorio');
+      return;
+    }
+    if (form.rejectionOptions.length === 0) {
+      toast.error('Seleccione al menos un motivo de rechazo');
+      return;
+    }
     if (!form.reason.trim()) {
       toast.error('El motivo detallado es obligatorio');
       return;
@@ -135,6 +155,8 @@ export function ArchivoReviewPage() {
           agentId: form.agentId || undefined,
           agentName: form.agentName || undefined,
           clientName: form.clientName || undefined,
+          policyNumber: form.policyNumber || undefined,
+          documentId: form.documentId || undefined,
           signaturePrincipalDetail: form.signaturePrincipalDetail || undefined,
           signatureGuarantorDetail: form.signatureGuarantorDetail || undefined,
           rejectionOptions: form.rejectionOptions,
@@ -155,7 +177,16 @@ export function ArchivoReviewPage() {
     }
   };
 
-  const mySubmissions = reviewsQuery.data ?? [];
+  const mySubmissions = (reviewsQuery.data ?? []).filter((review) => {
+    if (!historySearch.trim()) return true;
+    const term = historySearch.toLowerCase();
+    return (
+      review.originalFileName.toLowerCase().includes(term) ||
+      (review.clientName && review.clientName.toLowerCase().includes(term)) ||
+      (review.agentName && review.agentName.toLowerCase().includes(term)) ||
+      (review.policyNumber && review.policyNumber.toLowerCase().includes(term))
+    );
+  });
 
   return (
     <div className="mx-auto max-w-5xl space-y-10">
@@ -286,7 +317,7 @@ export function ArchivoReviewPage() {
 
           {/* Agent & Client row */}
           <div className="grid gap-4 sm:grid-cols-2">
-            <FormField label="Agente de seguros">
+            <FormField label={<>Agente de seguros <span className="font-normal text-red-500">*</span></>}>
               {agentsQuery.isLoading ? (
                 <div className="form-input flex items-center gap-2 text-gray-400">
                   <Loader2 className="animate-spin" size={14} />
@@ -308,7 +339,7 @@ export function ArchivoReviewPage() {
                 </select>
               )}
             </FormField>
-            <FormField label="Cliente / Fiado">
+            <FormField label={<>Cliente / Fiado <span className="font-normal text-red-500">*</span></>}>
               <input
                 className="form-input"
                 onChange={(e) => setField('clientName', e.target.value)}
@@ -320,7 +351,40 @@ export function ArchivoReviewPage() {
           </div>
 
           {/* Rejection options */}
-          <FormField label="Motivos de rechazo">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField label="Número de póliza / fianza">
+              <input
+                className="form-input"
+                onChange={(e) => setField('policyNumber', e.target.value)}
+                placeholder="Ej: F123456"
+                type="text"
+                value={form.policyNumber}
+              />
+            </FormField>
+            <FormField label="Documento relacionado (opcional)">
+              {recentDocumentsQuery.isLoading ? (
+                <div className="form-input flex items-center gap-2 text-gray-400">
+                  <Loader2 className="animate-spin" size={14} />
+                  Cargando...
+                </div>
+              ) : (
+                <select
+                  className="form-input"
+                  onChange={(e) => setField('documentId', e.target.value)}
+                  value={form.documentId}
+                >
+                  <option value="">— Ninguno —</option>
+                  {(recentDocumentsQuery.data?.items ?? []).map((doc) => (
+                    <option key={doc.id} value={doc.id}>
+                      {doc.title} ({format(new Date(doc.createdAt), 'dd/MM/yyyy')})
+                    </option>
+                  ))}
+                </select>
+              )}
+            </FormField>
+          </div>
+          
+          <FormField label={<>Motivos de rechazo <span className="font-normal text-red-500">*</span></>}>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {REJECTION_OPTIONS.map((opt) => (
                 <label
@@ -400,7 +464,16 @@ export function ArchivoReviewPage() {
 
       {/* History */}
       <section className="space-y-4">
-        <h2 className="text-xl font-bold text-gray-900">Historial de rechazos</h2>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-xl font-bold text-gray-900">Historial de rechazos</h2>
+          <input
+            type="text"
+            placeholder="Buscar por documento, cliente, agente o póliza..."
+            className="form-input sm:max-w-xs"
+            value={historySearch}
+            onChange={(e) => setHistorySearch(e.target.value)}
+          />
+        </div>
 
         {reviewsQuery.isLoading && <PageLoader message="Cargando historial..." />}
         {reviewsQuery.isError && (
@@ -459,6 +532,12 @@ export function ArchivoReviewPage() {
                           {review.rejectionReason}
                         </p>
                       )}
+                      {review.status === 'needs_info' && review.reviewNotes && (
+                        <div className="mt-2 rounded-xl bg-blue-50 p-2 text-xs text-blue-800 border border-blue-100 flex gap-2">
+                           <HelpCircle size={14} className="shrink-0 mt-0.5" />
+                           <p><strong>De Legal:</strong> {review.reviewNotes}</p>
+                        </div>
+                      )}
                       {review.rejectionOptions.length > 0 && (
                         <div className="mt-1 flex flex-wrap gap-1">
                           {review.rejectionOptions.slice(0, 3).map((opt) => (
@@ -483,6 +562,9 @@ export function ArchivoReviewPage() {
                       )}
                       {review.clientName && (
                         <p className="text-xs text-gray-400">{review.clientName}</p>
+                      )}
+                      {review.policyNumber && (
+                        <p className="text-[10px] font-medium text-brand-600 mt-0.5">Póliza/Fianza: {review.policyNumber}</p>
                       )}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-400">
@@ -544,6 +626,13 @@ function ReviewStatusBadge({ status }: { status: string }) {
         <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-600">
           <CheckCircle2 size={12} />
           Restaurado
+        </span>
+      );
+    case 'needs_info':
+      return (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-600">
+          <HelpCircle size={12} />
+          Requiere Info
         </span>
       );
     default:

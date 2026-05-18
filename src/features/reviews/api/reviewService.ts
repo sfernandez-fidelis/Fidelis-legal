@@ -1,7 +1,7 @@
 import { PDFDocument } from 'pdf-lib';
 import { supabase } from '../../../lib/supabase/client';
 
-export type ReviewStatus = 'pending_review' | 'confirmed' | 'restored';
+export type ReviewStatus = 'pending_review' | 'confirmed' | 'restored' | 'needs_info';
 
 // All the structured options for rejection reasons (checkboxes)
 export const REJECTION_OPTIONS = [
@@ -37,6 +37,7 @@ export interface DocumentReview {
   clientName?: string | null;
   signaturePrincipalDetail?: string | null;
   signatureGuarantorDetail?: string | null;
+  policyNumber?: string | null;
   rejectionOptions: string[];
   // Review resolution
   reviewedBy?: string | null;
@@ -57,7 +58,9 @@ export interface RejectionPayload {
   clientName?: string;
   signaturePrincipalDetail?: string;
   signatureGuarantorDetail?: string;
+  policyNumber?: string;
   rejectionOptions?: string[];
+  documentId?: string;
 }
 
 function normalizeReview(row: any): DocumentReview {
@@ -80,6 +83,7 @@ function normalizeReview(row: any): DocumentReview {
     clientName: row.client_name ?? null,
     signaturePrincipalDetail: row.signature_principal_detail ?? null,
     signatureGuarantorDetail: row.signature_guarantor_detail ?? null,
+    policyNumber: row.policy_number ?? null,
     rejectionOptions: row.rejection_options ?? [],
     reviewedBy: row.reviewed_by,
     reviewedByName: row.reviewer?.full_name ?? null,
@@ -106,8 +110,7 @@ async function compressPdf(file: File): Promise<File> {
       useObjectStreams: true,  // pack multiple objects into compressed streams
       addDefaultPage: false,
     });
-
-    const compressedBlob = new Blob([compressedBytes], { type: 'application/pdf' });
+    const compressedBlob = new Blob([compressedBytes as any], { type: 'application/pdf' });
 
     // Only use the compressed version if it's actually smaller
     if (compressedBlob.size < file.size) {
@@ -162,7 +165,7 @@ export const reviewService = {
     actorId: string,
     payload: RejectionPayload,
   ): Promise<string> {
-    const { file, reason, documentDate, fidelisEntryDate, agentId, agentName, clientName, signaturePrincipalDetail, signatureGuarantorDetail, rejectionOptions } = payload;
+    const { file, reason, documentDate, fidelisEntryDate, agentId, agentName, clientName, signaturePrincipalDetail, signatureGuarantorDetail, policyNumber, rejectionOptions, documentId } = payload;
 
     // Compress PDF before upload
     const fileToUpload = await compressPdf(file);
@@ -187,6 +190,7 @@ export const reviewService = {
       .from('document_reviews')
       .insert({
         organization_id: organizationId,
+        document_id: documentId || null,
         original_file_name: file.name,
         original_storage_path: storagePath,
         status: 'pending_review',
@@ -200,6 +204,7 @@ export const reviewService = {
         client_name: clientName || null,
         signature_principal_detail: signaturePrincipalDetail || null,
         signature_guarantor_detail: signatureGuarantorDetail || null,
+        policy_number: policyNumber || null,
         rejection_options: rejectionOptions ?? [],
       })
       .select('id')
@@ -213,10 +218,11 @@ export const reviewService = {
     organizationId: string,
     actorId: string,
     reviewId: string,
-    decision: 'confirmed' | 'restored',
+    decision: 'confirmed' | 'restored' | 'needs_info',
     notes?: string,
     originalStoragePath?: string,
   ): Promise<void> {
+    let newStampedPath: string | null = null;
     if (decision === 'confirmed' && originalStoragePath) {
       const { data: fileData, error: downloadError } = await supabase.storage
         .from('review-files')
@@ -227,9 +233,11 @@ export const reviewService = {
       const { stampPdf } = await import('../../../lib/pdf/stamper');
       const stampedBlob = await stampPdf(fileData);
 
+      newStampedPath = originalStoragePath.replace(/\.pdf$/i, '_stamped.pdf');
+
       const { error: uploadError } = await supabase.storage
         .from('review-files')
-        .upload(originalStoragePath, stampedBlob, {
+        .upload(newStampedPath, stampedBlob, {
           contentType: 'application/pdf',
           upsert: true,
         });
@@ -244,7 +252,7 @@ export const reviewService = {
         reviewed_by: actorId,
         reviewed_at: new Date().toISOString(),
         review_notes: notes || null,
-        stamped_storage_path: decision === 'confirmed' && originalStoragePath ? originalStoragePath : null,
+        stamped_storage_path: newStampedPath,
       })
       .eq('id', reviewId)
       .eq('organization_id', organizationId);

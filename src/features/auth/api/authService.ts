@@ -150,20 +150,21 @@ async function buildAppSession(user: User): Promise<AppSession> {
       console.warn('[AuthService] acceptPendingInvitations failed (non-blocking):', err);
     });
 
-    const [profile, membership] = await Promise.all([
+    const [profile, initialMembership] = await Promise.all([
       withTimeout(ensureProfile(user), 'ensureProfile'),
-      withTimeout(
-        // Chain: first accept invitations (fire-and-forget started above),
-        // then fetch membership so new invitations are reflected
-        invitationsPromise.then(() => fetchMembership(user.id)),
-        'fetchMembership',
-      ),
+      withTimeout(fetchMembership(user.id), 'fetchMembership'),
     ]);
 
-    let finalMembership = membership;
+    let finalMembership = initialMembership;
     if (!finalMembership) {
-      console.log('[AuthService] No membership found, bootstrapping workspace...');
-      finalMembership = await withTimeout(bootstrapWorkspace(user), 'bootstrapWorkspace');
+      console.log('[AuthService] No membership found, waiting for pending invitations to complete...');
+      await invitationsPromise;
+      finalMembership = await withTimeout(fetchMembership(user.id), 'fetchMembershipRetry');
+      
+      if (!finalMembership) {
+        console.log('[AuthService] Still no membership found, bootstrapping workspace...');
+        finalMembership = await withTimeout(bootstrapWorkspace(user), 'bootstrapWorkspace');
+      }
     }
 
     console.log('[AuthService] Session built successfully.');
@@ -200,6 +201,17 @@ async function buildAppSession(user: User): Promise<AppSession> {
 }
 
 async function ensureProfile(user: User) {
+  // First try to fetch the profile to avoid unnecessary database writes (upserts) on every load
+  const { data: existingProfile, error: selectError } = await supabase
+    .from('profiles')
+    .select('id, email, full_name')
+    .eq('id', user.id)
+    .single();
+
+  if (existingProfile && !selectError) {
+    return existingProfile;
+  }
+
   const payload = {
     id: user.id,
     email: user.email ?? null,
