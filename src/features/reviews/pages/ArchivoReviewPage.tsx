@@ -57,7 +57,7 @@ export function ArchivoReviewPage() {
   const reviewsQuery = useReviewsQuery('all');
   const submitMutation = useSubmitRejection();
   const agentsQuery = useInsuranceAgentsQuery();
-  const recentDocumentsQuery = useDocumentsQuery({ status: 'draft' }, 1);
+  const recentDocumentsQuery = useDocumentsQuery({ status: 'draft', pageSize: 100 }, 1);
 
   const setField = <K extends keyof RejectionFormState>(key: K, value: RejectionFormState[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
