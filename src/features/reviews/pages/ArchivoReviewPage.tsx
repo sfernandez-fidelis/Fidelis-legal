@@ -61,8 +61,12 @@ export function ArchivoReviewPage() {
   const agentsQuery = useInsuranceAgentsQuery();
   const recentDocumentsQuery = useDocumentsQuery({ status: 'draft', pageSize: 100 }, 1);
 
-  const isDirectAgent = form.agentName.toLowerCase().includes('directo') || 
-    agentsQuery.data?.find((a) => a.id === form.agentId)?.code?.toUpperCase() === 'DIRECTO';
+  const selectedAgent = agentsQuery.data?.find((a) => a.id === form.agentId);
+  const isDirectAgent = 
+    selectedAgent?.code === '0' ||
+    selectedAgent?.code?.toUpperCase() === 'DIRECTO' || 
+    selectedAgent?.fullName.toLowerCase().includes('directo') ||
+    form.agentName.toLowerCase().includes('directo');
 
   const setField = <K extends keyof RejectionFormState>(key: K, value: RejectionFormState[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));

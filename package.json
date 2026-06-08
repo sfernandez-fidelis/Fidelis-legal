@@ -15,6 +15,7 @@
     "db:migrate": "tsx scripts/db/migrate.ts",
     "db:seed": "tsx scripts/db/seed.ts",
     "db:setup": "tsx scripts/db/apply-setup.ts",
+    "db:import-csvs": "tsx scripts/db/import-csvs.ts",
     "release:check": "npm run lint && npm run test && npm run build"
   },
   "dependencies": {

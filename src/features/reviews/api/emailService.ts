@@ -25,7 +25,7 @@ export function generateRejectionHtml(data: RejectionEmailData): string {
     })
     .join('');
 
-  const isDirect = data.agentCode?.toUpperCase() === 'DIRECTO' || data.agentName?.toLowerCase().includes('directo');
+  const isDirect = data.agentCode === '0' || data.agentCode?.toUpperCase() === 'DIRECTO' || data.agentName?.toLowerCase().includes('directo');
   const introText = isDirect
     ? `Estimado/a cliente <strong>${data.clientName}</strong>,<br><br>
        Le notificamos que la contragarantía física de su póliza de fianza ha sido <strong>rechazada</strong> por nuestro Departamento Legal debido a inconsistencias que requieren su corrección.`
@@ -237,8 +237,9 @@ export function generateRejectionHtml(data: RejectionEmailData): string {
  */
 export const emailService = {
   async sendRejectionEmail(data: RejectionEmailData): Promise<void> {
-    // ⚠️ NOTA DE TECNOLOGÍA: Cambie esta URL por el endpoint de su microservicio de correos
-    const EMAIL_API_URL = import.meta.env.VITE_EMAIL_API_URL || 'https://api.fidelis.com.gt/v1/emails';
+    // ⚠️ NOTA DE TECNOLOGÍA: Cambie esta URL por su endpoint de SendGrid si utiliza un proxy,
+    // o deje el valor por defecto de SendGrid v3
+    const EMAIL_API_URL = import.meta.env.VITE_EMAIL_API_URL || 'https://api.sendgrid.com/v3/mail/send';
     const EMAIL_API_KEY = import.meta.env.VITE_EMAIL_API_KEY || '';
 
     const htmlBody = generateRejectionHtml(data);
@@ -251,8 +252,13 @@ export const emailService = {
           .join(', ')
       : '';
 
+    const toArray = cleanEmails
+      .split(',')
+      .map((email) => ({ email: email.trim() }))
+      .filter((item) => Boolean(item.email));
+
     try {
-      console.log(`[EmailService] Enviando correo de rechazo a: ${cleanEmails} para póliza: ${data.policyNumber}`);
+      console.log(`[EmailService] Enviando correo de rechazo vía SendGrid a: ${cleanEmails} para póliza: ${data.policyNumber}`);
 
       const response = await fetch(EMAIL_API_URL, {
         method: 'POST',
@@ -261,27 +267,33 @@ export const emailService = {
           'Authorization': `Bearer ${EMAIL_API_KEY}`,
         },
         body: JSON.stringify({
-          to: cleanEmails,
-          subject: `RECHAZADO: Contragarantía Póliza ${data.policyNumber} - ${data.clientName}`,
-          html: htmlBody,
-          // Datos adicionales que su servicio de correos pueda requerir
-          metadata: {
-            policyNumber: data.policyNumber,
-            clientName: data.clientName,
-            agentCode: data.agentCode,
-            portalUrl: data.portalUrl,
+          personalizations: [
+            {
+              to: toArray,
+            },
+          ],
+          from: {
+            email: 'no-reply@fidelis.com.gt', // Remitente verificado de su cuenta de SendGrid
+            name: 'Fidelis Legal',
           },
+          subject: `RECHAZADO: Contragarantía Póliza ${data.policyNumber} - ${data.clientName}`,
+          content: [
+            {
+              type: 'text/html',
+              value: htmlBody,
+            },
+          ],
         }),
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Error en servidor de correos (${response.status}): ${errorText}`);
+        throw new Error(`Error en SendGrid (${response.status}): ${errorText}`);
       }
 
-      console.log('[EmailService] Correo enviado exitosamente.');
+      console.log('[EmailService] Correo enviado exitosamente vía SendGrid.');
     } catch (error) {
-      console.error('[EmailService] Error al enviar el correo:', error);
+      console.error('[EmailService] Error al enviar el correo vía SendGrid:', error);
       throw error;
     }
   },

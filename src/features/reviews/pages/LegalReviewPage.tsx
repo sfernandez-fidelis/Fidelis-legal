@@ -49,12 +49,12 @@ export function LegalReviewPage() {
     const reviewsToSend = (reviewsQuery.data ?? []).filter((r) => selectedReviewIds.includes(r.id));
     
     const withEmail = reviewsToSend.filter((r) => {
-      const isDirect = r.agentCode?.toUpperCase() === 'DIRECTO' || r.agentName?.toLowerCase().includes('directo');
+      const isDirect = r.agentCode === '0' || r.agentCode?.toUpperCase() === 'DIRECTO' || r.agentName?.toLowerCase().includes('directo');
       return isDirect ? !!r.clientEmail : !!r.agentEmail;
     });
 
     const withoutEmail = reviewsToSend.filter((r) => {
-      const isDirect = r.agentCode?.toUpperCase() === 'DIRECTO' || r.agentName?.toLowerCase().includes('directo');
+      const isDirect = r.agentCode === '0' || r.agentCode?.toUpperCase() === 'DIRECTO' || r.agentName?.toLowerCase().includes('directo');
       return isDirect ? !r.clientEmail : !r.agentEmail;
     });
     
@@ -71,7 +71,7 @@ export function LegalReviewPage() {
     const sentIds: string[] = [];
 
     for (const review of withEmail) {
-      const isDirect = review.agentCode?.toUpperCase() === 'DIRECTO' || review.agentName?.toLowerCase().includes('directo');
+      const isDirect = review.agentCode === '0' || review.agentCode?.toUpperCase() === 'DIRECTO' || review.agentName?.toLowerCase().includes('directo');
       const recipientEmail = isDirect ? review.clientEmail! : review.agentEmail!;
       const recipientName = isDirect ? review.clientName! : review.agentName!;
 
@@ -602,7 +602,7 @@ function ReviewCard({
   showCheckbox?: boolean;
 }) {
   const isPending = review.status === 'pending_review';
-  const isDirect = review.agentCode?.toUpperCase() === 'DIRECTO' || review.agentName?.toLowerCase().includes('directo');
+  const isDirect = review.agentCode === '0' || review.agentCode?.toUpperCase() === 'DIRECTO' || review.agentName?.toLowerCase().includes('directo');
   const targetEmail = isDirect ? review.clientEmail : review.agentEmail;
 
   return (

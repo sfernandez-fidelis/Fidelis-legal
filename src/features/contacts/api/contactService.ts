@@ -109,7 +109,9 @@ async function loadOrganizationContacts(organizationId: string, search?: string)
     .is('archived_at', null);
 
   if (search?.trim()) {
-    query = query.ilike('search_text', `%${search.trim()}%`);
+    query = query.ilike('search_text', `%${search.trim()}%`).limit(100);
+  } else {
+    query = query.limit(50);
   }
 
   const { data, error } = await query;
@@ -258,16 +260,65 @@ export const contactService = {
     page: number,
   ): Promise<PaginatedResult<ContactData>> {
     const pageSize = filters.pageSize ?? PAGE_SIZE;
-    const allContacts = await loadOrganizationContacts(organizationId, filters.search);
-    const filtered = applyContactFilters(allContacts, filters);
     const from = (page - 1) * pageSize;
-    const items = filtered.slice(from, from + pageSize);
+    const to = from + pageSize - 1;
+
+    // Si es para buscar duplicados, necesitamos cargarlos todos en memoria para agruparlos
+    if (filters.duplicatesOnly) {
+      const allContacts = await loadOrganizationContacts(organizationId, filters.search);
+      const filtered = applyContactFilters(allContacts, filters);
+      const items = filtered.slice(from, from + pageSize);
+      return {
+        items,
+        page,
+        pageSize,
+        total: filtered.length,
+      };
+    }
+
+    // Para cualquier otra búsqueda o listado general, paginamos directamente en PostgreSQL
+    let query = supabase
+      .from('contacts')
+      .select('*', { count: 'exact' })
+      .eq('organization_id', organizationId)
+      .is('archived_at', null);
+
+    if (filters.search?.trim()) {
+      query = query.ilike('search_text', `%${filters.search.trim()}%`);
+    }
+
+    if (filters.types?.length) {
+      for (const type of filters.types) {
+        query = query.contains('metadata', { contactTypes: [type] });
+      }
+    }
+
+    if (filters.tag?.trim()) {
+      query = query.contains('metadata', { tags: [filters.tag.trim()] });
+    }
+
+    // Ordenar en base de datos
+    if (filters.sort === 'name') {
+      query = query.order('party->>name', { ascending: true });
+    } else if (filters.sort === 'recent') {
+      query = query.order('created_at', { ascending: false });
+    } else if (filters.sort === 'frequent') {
+      query = query.order('metadata->useCount', { ascending: false, nullsFirst: false });
+    } else {
+      query = query.order('created_at', { ascending: false });
+    }
+
+    // Aplicar rango de paginación
+    query = query.range(from, to);
+
+    const { data, count, error } = await query;
+    if (error) throw error;
 
     return {
-      items,
+      items: (data ?? []).map(hydrateContact),
       page,
       pageSize,
-      total: filtered.length,
+      total: count ?? 0,
     };
   },
 
@@ -291,13 +342,39 @@ export const contactService = {
     search: string,
     options: { limit?: number; types?: ContactType[]; sort?: 'recent' | 'frequent' | 'name' } = {},
   ) {
-    const items = await loadOrganizationContacts(organizationId, search);
-    const filtered = applyContactFilters(items, {
-      search,
-      types: options.types,
-      sort: options.sort ?? (search.trim() ? 'frequent' : 'recent'),
-    });
-    return filtered.slice(0, options.limit ?? 8);
+    const limit = options.limit ?? 8;
+
+    let query = supabase
+      .from('contacts')
+      .select('*')
+      .eq('organization_id', organizationId)
+      .is('archived_at', null)
+      .limit(limit);
+
+    if (search.trim()) {
+      query = query.ilike('search_text', `%${search.trim()}%`);
+    }
+
+    if (options.types?.length) {
+      for (const type of options.types) {
+        query = query.contains('metadata', { contactTypes: [type] });
+      }
+    }
+
+    if (options.sort === 'name') {
+      query = query.order('party->>name', { ascending: true });
+    } else if (options.sort === 'recent') {
+      query = query.order('created_at', { ascending: false });
+    } else if (options.sort === 'frequent' || (!search.trim() && !options.sort)) {
+      query = query.order('metadata->useCount', { ascending: false, nullsFirst: false });
+    } else {
+      query = query.order('created_at', { ascending: false });
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    return (data ?? []).map(hydrateContact);
   },
 
   async upsertContact(organizationId: string, party: PartyDetails, options: SaveContactOptions = {}) {
