@@ -8,6 +8,7 @@ import {
   FileText,
   HelpCircle,
   Loader2,
+  Search,
   Trash2,
   X,
 } from 'lucide-react';
@@ -18,6 +19,8 @@ import { useDocumentsQuery } from '../../documents/hooks/useDocumentsQuery';
 import { REJECTION_OPTIONS, type RejectionOptionValue } from '../api/reviewService';
 import { PageLoader } from '../../../shared/components/PageLoader';
 import { PageErrorState } from '../../../shared/components/PageErrorState';
+import { useDebouncedValue } from '../../../shared/hooks/useDebouncedValue';
+import { useContactSuggestions } from '../../contacts/hooks/useContactSuggestions';
 
 interface RejectionFormState {
   documentDate: string;
@@ -60,6 +63,38 @@ export function ArchivoReviewPage() {
   const submitMutation = useSubmitRejection();
   const agentsQuery = useInsuranceAgentsQuery();
   const recentDocumentsQuery = useDocumentsQuery({ status: 'draft', pageSize: 100 }, 1);
+
+  const [agentSearchInput, setAgentSearchInput] = useState('');
+  const [showAgentSuggestions, setShowAgentSuggestions] = useState(false);
+
+  const [clientSearchInput, setClientSearchInput] = useState('');
+  const [showClientSuggestions, setShowClientSuggestions] = useState(false);
+
+  const debouncedClientSearch = useDebouncedValue(clientSearchInput, 250);
+
+  const clientSuggestions = useContactSuggestions(debouncedClientSearch, {
+    limit: 6,
+    enabled: showClientSuggestions && debouncedClientSearch.trim().length >= 3,
+  });
+
+  const recentClients = useContactSuggestions('', {
+    limit: 5,
+    enabled: showClientSuggestions && !debouncedClientSearch.trim(),
+    sort: 'recent',
+  });
+
+  const clientSuggestionResults = debouncedClientSearch.trim()
+    ? clientSuggestions.data ?? []
+    : recentClients.data ?? [];
+
+  const filteredAgents = (agentsQuery.data ?? []).filter((agent) => {
+    const term = agentSearchInput.toLowerCase().trim();
+    if (!term) return true;
+    return (
+      agent.fullName.toLowerCase().includes(term) ||
+      (agent.code && agent.code.toLowerCase().includes(term))
+    );
+  });
 
   const selectedAgent = agentsQuery.data?.find((a) => a.id === form.agentId);
   const isDirectAgent = 
@@ -122,13 +157,32 @@ export function ArchivoReviewPage() {
     setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
-  const handleAgentChange = (agentId: string) => {
-    const agent = agentsQuery.data?.find((a) => a.id === agentId);
+  const handleAgentSelect = (agent: any) => {
     setForm((prev) => ({
       ...prev,
-      agentId,
-      agentName: agent?.fullName ?? '',
+      agentId: agent.id,
+      agentName: agent.fullName,
     }));
+    setAgentSearchInput(agent.fullName);
+    setShowAgentSuggestions(false);
+  };
+
+  const handleClientSelect = (name: string) => {
+    setForm((prev) => ({ ...prev, clientName: name }));
+    setClientSearchInput(name);
+    setShowClientSuggestions(false);
+  };
+
+  const handleAgentBlur = () => {
+    setTimeout(() => {
+      setShowAgentSuggestions(false);
+    }, 200);
+  };
+
+  const handleClientBlur = () => {
+    setTimeout(() => {
+      setShowClientSuggestions(false);
+    }, 200);
   };
 
   const handleSubmit = async () => {
@@ -188,6 +242,8 @@ export function ArchivoReviewPage() {
       );
       setSelectedFiles([]);
       setForm(EMPTY_FORM);
+      setAgentSearchInput('');
+      setClientSearchInput('');
     }
   };
 
@@ -338,30 +394,82 @@ export function ArchivoReviewPage() {
                   Cargando agentes...
                 </div>
               ) : (
-                <select
-                  className="form-input"
-                  onChange={(e) => handleAgentChange(e.target.value)}
-                  value={form.agentId}
-                >
-                  <option value="">— Seleccionar agente —</option>
-                  {(agentsQuery.data ?? []).map((agent) => (
-                    <option key={agent.id} value={agent.id}>
-                      {agent.fullName}
-                      {agent.code ? ` (${agent.code})` : ''}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <input
+                    className="form-input"
+                    onChange={(e) => {
+                      setAgentSearchInput(e.target.value);
+                      if (!e.target.value) {
+                        setForm((prev) => ({ ...prev, agentId: '', agentName: '' }));
+                      }
+                    }}
+                    onFocus={() => setShowAgentSuggestions(true)}
+                    onBlur={handleAgentBlur}
+                    placeholder="Escriba para buscar agente..."
+                    type="text"
+                    value={agentSearchInput}
+                  />
+                  {showAgentSuggestions && filteredAgents.length > 0 && (
+                    <div className="absolute left-0 right-0 z-50 mt-1 max-h-60 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-xl divide-y divide-gray-50">
+                      {filteredAgents.map((agent) => (
+                        <button
+                          key={agent.id}
+                          type="button"
+                          className="w-full px-4 py-2.5 text-left text-xs transition-colors hover:bg-red-50/50"
+                          onClick={() => handleAgentSelect(agent)}
+                        >
+                          <span className="font-bold text-gray-800 block">
+                            {agent.fullName}
+                          </span>
+                          {agent.code && (
+                            <span className="text-gray-400 block mt-0.5">
+                              Código: {agent.code}
+                            </span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               )}
             </FormField>
             <div className="space-y-4">
               <FormField label={<>Cliente / Fiado <span className="font-normal text-red-500">*</span></>}>
-                <input
-                  className="form-input"
-                  onChange={(e) => setField('clientName', e.target.value)}
-                  placeholder="Nombre del cliente o fiado"
-                  type="text"
-                  value={form.clientName}
-                />
+                <div className="relative">
+                  <input
+                    className="form-input"
+                    onChange={(e) => {
+                      setField('clientName', e.target.value);
+                      setClientSearchInput(e.target.value);
+                    }}
+                    onFocus={() => setShowClientSuggestions(true)}
+                    onBlur={handleClientBlur}
+                    placeholder="Escriba para buscar cliente (mínimo 3 letras)..."
+                    type="text"
+                    value={form.clientName}
+                  />
+                  {showClientSuggestions && clientSuggestionResults.length > 0 && (
+                    <div className="absolute left-0 right-0 z-50 mt-1 max-h-60 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-xl divide-y divide-gray-50">
+                      {clientSuggestionResults.map((contact) => (
+                        <button
+                          key={contact.id}
+                          type="button"
+                          className="w-full px-4 py-2.5 text-left text-xs transition-colors hover:bg-red-50/50"
+                          onClick={() => handleClientSelect(contact.displayName || contact.party.name)}
+                        >
+                          <span className="font-bold text-gray-800 block">
+                            {contact.displayName}
+                          </span>
+                          <span className="text-gray-400 block mt-0.5">
+                            {[contact.party.entityName, contact.party.idNumber]
+                              .filter(Boolean)
+                              .join(' • ')}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </FormField>
               {isDirectAgent && (
                 <FormField label={<>Correo del cliente / fiado <span className="font-normal text-red-500">*</span></>}>
