@@ -57,16 +57,17 @@ describe('authService', () => {
     });
 
     const tableHandlers: Record<string, () => any> = {
-      profiles: () => ({
-        upsert: vi.fn(() => ({
-          select: vi.fn(() => ({
-            single: vi.fn().mockResolvedValue({
-              data: { id: user.id, email: user.email, full_name: 'Workspace Owner' },
-              error: null,
-            }),
-          })),
-        })),
-      }),
+      profiles: () => {
+        const queryMock: any = {};
+        queryMock.select = vi.fn(() => queryMock);
+        queryMock.eq = vi.fn(() => queryMock);
+        queryMock.single = vi.fn().mockResolvedValue({
+          data: { id: user.id, email: user.email, full_name: 'Workspace Owner' },
+          error: null,
+        });
+        queryMock.upsert = vi.fn(() => queryMock);
+        return queryMock;
+      },
       organization_invitations: () => ({
         select: vi.fn(() => ({
           eq: vi.fn(() => ({
@@ -169,7 +170,7 @@ describe('authService', () => {
 
     const membershipSelect = vi
       .fn()
-      .mockImplementationOnce(() => ({
+      .mockImplementation(() => ({
         eq: vi.fn(() => ({
           is: vi.fn(() => ({
             order: vi.fn(() => ({
@@ -213,7 +214,15 @@ describe('authService', () => {
 
     mocks.from.mockImplementation((table: string) => {
       if (table === 'profiles') {
-        return { upsert: profilesUpsert };
+        const queryMock: any = {};
+        queryMock.select = vi.fn(() => queryMock);
+        queryMock.eq = vi.fn(() => queryMock);
+        queryMock.single = vi.fn().mockResolvedValue({
+          data: { id: user.id, email: user.email, full_name: 'Workspace Owner' },
+          error: null,
+        });
+        queryMock.upsert = profilesUpsert;
+        return queryMock;
       }
 
       if (table === 'organization_invitations') {

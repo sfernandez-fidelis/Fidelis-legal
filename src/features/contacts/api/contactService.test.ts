@@ -29,30 +29,35 @@ describe('contactService', () => {
         throw new Error(`Unexpected table: ${table}`);
       }
 
-      return {
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            is: vi.fn(() => ({
-              ilike: vi.fn().mockResolvedValue({
-                data: [
-                  {
-                    id: contact.id,
-                    organization_id: contact.organizationId,
-                    kind: contact.kind,
-                    external_key: contact.externalKey,
-                    party: contact.party,
-                    metadata: contact.metadata,
-                    created_at: contact.createdAt,
-                    updated_at: contact.updatedAt,
-                    archived_at: null,
-                  },
-                ],
-                error: null,
-              }),
-            })),
-          })),
-        })),
+      const queryMock: any = {};
+      queryMock.select = vi.fn(() => queryMock);
+      queryMock.eq = vi.fn(() => queryMock);
+      queryMock.is = vi.fn(() => queryMock);
+      queryMock.ilike = vi.fn(() => queryMock);
+      queryMock.contains = vi.fn(() => queryMock);
+      queryMock.order = vi.fn(() => queryMock);
+      queryMock.range = vi.fn(() => queryMock);
+      queryMock.then = (onfulfilled: any) => {
+        return Promise.resolve({
+          data: [
+            {
+              id: contact.id,
+              organization_id: contact.organizationId,
+              kind: contact.kind,
+              external_key: contact.externalKey,
+              party: contact.party,
+              metadata: contact.metadata,
+              created_at: contact.createdAt,
+              updated_at: contact.updatedAt,
+              archived_at: null,
+            },
+          ],
+          count: 1,
+          error: null,
+        }).then(onfulfilled);
       };
+
+      return queryMock;
     });
 
     const result = await contactService.listContacts('org-1', { search: 'ana', sort: 'name' }, 1);
