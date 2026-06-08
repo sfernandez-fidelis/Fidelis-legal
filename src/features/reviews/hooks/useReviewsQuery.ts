@@ -79,3 +79,22 @@ export function useResolveReview() {
     },
   });
 }
+
+export function useMarkEmailSent() {
+  const session = useAppSession();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (reviewIds: string[]) => {
+      const orgId = session?.membership.organizationId;
+      const actorId = session?.user.id;
+      if (!orgId) throw new Error('Sin sesión activa. Recarga la página.');
+      if (!actorId) throw new Error('Usuario no identificado. Recarga la página.');
+      return reviewService.markEmailSent(orgId, actorId, reviewIds);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: REVIEW_KEYS.all });
+    },
+  });
+}
+

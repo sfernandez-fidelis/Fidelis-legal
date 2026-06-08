@@ -25,6 +25,7 @@ interface RejectionFormState {
   agentId: string;
   agentName: string;
   clientName: string;
+  clientEmail: string;
   policyNumber: string;
   documentId: string;
   reason: string;
@@ -39,6 +40,7 @@ const EMPTY_FORM: RejectionFormState = {
   agentId: '',
   agentName: '',
   clientName: '',
+  clientEmail: '',
   policyNumber: '',
   documentId: '',
   reason: '',
@@ -58,6 +60,9 @@ export function ArchivoReviewPage() {
   const submitMutation = useSubmitRejection();
   const agentsQuery = useInsuranceAgentsQuery();
   const recentDocumentsQuery = useDocumentsQuery({ status: 'draft', pageSize: 100 }, 1);
+
+  const isDirectAgent = form.agentName.toLowerCase().includes('directo') || 
+    agentsQuery.data?.find((a) => a.id === form.agentId)?.code?.toUpperCase() === 'DIRECTO';
 
   const setField = <K extends keyof RejectionFormState>(key: K, value: RejectionFormState[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -135,6 +140,10 @@ export function ArchivoReviewPage() {
       toast.error('El nombre del cliente o fiado es obligatorio');
       return;
     }
+    if (isDirectAgent && !form.clientEmail.trim()) {
+      toast.error('El correo del cliente/fiado es obligatorio para agentes directos');
+      return;
+    }
     if (form.rejectionOptions.length === 0) {
       toast.error('Seleccione al menos un motivo de rechazo');
       return;
@@ -155,6 +164,7 @@ export function ArchivoReviewPage() {
           agentId: form.agentId || undefined,
           agentName: form.agentName || undefined,
           clientName: form.clientName || undefined,
+          clientEmail: isDirectAgent ? form.clientEmail : undefined,
           policyNumber: form.policyNumber || undefined,
           documentId: form.documentId || undefined,
           signaturePrincipalDetail: form.signaturePrincipalDetail || undefined,
@@ -339,15 +349,29 @@ export function ArchivoReviewPage() {
                 </select>
               )}
             </FormField>
-            <FormField label={<>Cliente / Fiado <span className="font-normal text-red-500">*</span></>}>
-              <input
-                className="form-input"
-                onChange={(e) => setField('clientName', e.target.value)}
-                placeholder="Nombre del cliente o fiado"
-                type="text"
-                value={form.clientName}
-              />
-            </FormField>
+            <div className="space-y-4">
+              <FormField label={<>Cliente / Fiado <span className="font-normal text-red-500">*</span></>}>
+                <input
+                  className="form-input"
+                  onChange={(e) => setField('clientName', e.target.value)}
+                  placeholder="Nombre del cliente o fiado"
+                  type="text"
+                  value={form.clientName}
+                />
+              </FormField>
+              {isDirectAgent && (
+                <FormField label={<>Correo del cliente / fiado <span className="font-normal text-red-500">*</span></>}>
+                  <input
+                    className="form-input border-red-200 focus:border-red-500 focus:ring-red-100"
+                    onChange={(e) => setField('clientEmail', e.target.value)}
+                    placeholder="ejemplo@cliente.com, otro@cliente.com"
+                    type="text"
+                    value={form.clientEmail}
+                  />
+                  <p className="text-[11px] text-red-500 italic">Requerido por ser agente directo (notificación directa al fiado). Puede ingresar múltiples correos separados por comas.</p>
+                </FormField>
+              )}
+            </div>
           </div>
 
           {/* Rejection options */}

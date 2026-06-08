@@ -9,14 +9,16 @@ import {
   FileText,
   HelpCircle,
   Loader2,
+  Mail,
   MessageSquareWarning,
   RotateCcw,
+  Send,
   ShieldCheck,
   User,
   X,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useReviewsQuery, useResolveReview } from '../hooks/useReviewsQuery';
+import { useReviewsQuery, useResolveReview, useMarkEmailSent } from '../hooks/useReviewsQuery';
 import { reviewService, REJECTION_OPTIONS, type DocumentReview, type ReviewStatus } from '../api/reviewService';
 import { PageLoader } from '../../../shared/components/PageLoader';
 import { PageErrorState } from '../../../shared/components/PageErrorState';
@@ -30,9 +32,78 @@ export function LegalReviewPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedReviewIds, setSelectedReviewIds] = useState<string[]>([]);
 
   const reviewsQuery = useReviewsQuery(activeTab);
   const resolveMutation = useResolveReview();
+  const markEmailSentMutation = useMarkEmailSent();
+
+  const handleSelectToggle = (id: string) => {
+    setSelectedReviewIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleSendEmails = async () => {
+    if (selectedReviewIds.length === 0) return;
+    const reviewsToSend = (reviewsQuery.data ?? []).filter((r) => selectedReviewIds.includes(r.id));
+    
+    const withEmail = reviewsToSend.filter((r) => {
+      const isDirect = r.agentCode?.toUpperCase() === 'DIRECTO' || r.agentName?.toLowerCase().includes('directo');
+      return isDirect ? !!r.clientEmail : !!r.agentEmail;
+    });
+
+    const withoutEmail = reviewsToSend.filter((r) => {
+      const isDirect = r.agentCode?.toUpperCase() === 'DIRECTO' || r.agentName?.toLowerCase().includes('directo');
+      return isDirect ? !r.clientEmail : !r.agentEmail;
+    });
+    
+    if (withEmail.length === 0) {
+      toast.error("Ninguno de los documentos seleccionados tiene un correo electrónico válido (se requiere el correo del agente o del fiado para agente directo).");
+      return;
+    }
+
+    if (withoutEmail.length > 0) {
+      toast.warning(`Se omitirán ${withoutEmail.length} documento(s) por no tener un correo válido o configurado.`);
+    }
+
+    let successCount = 0;
+    const sentIds: string[] = [];
+
+    for (const review of withEmail) {
+      const isDirect = review.agentCode?.toUpperCase() === 'DIRECTO' || review.agentName?.toLowerCase().includes('directo');
+      const recipientEmail = isDirect ? review.clientEmail! : review.agentEmail!;
+      const recipientName = isDirect ? review.clientName! : review.agentName!;
+
+      try {
+        const { emailService } = await import('../api/emailService');
+        await emailService.sendRejectionEmail({
+          policyNumber: review.policyNumber || '',
+          clientName: review.clientName || '',
+          agentName: recipientName,
+          agentCode: review.agentCode || '',
+          agentEmail: recipientEmail,
+          rejectionReason: review.reviewNotes || review.rejectionReason || '',
+          rejectionOptions: review.rejectionOptions,
+          portalUrl: `${window.location.origin}/public/review/${review.id}`,
+        });
+        successCount++;
+        sentIds.push(review.id);
+      } catch (err: any) {
+        toast.error(`Error enviando correo para ${review.originalFileName}: ${err.message || err}`);
+      }
+    }
+
+    if (sentIds.length > 0) {
+      try {
+        await markEmailSentMutation.mutateAsync(sentIds);
+        toast.success(`${successCount} correo(s) enviado(s) y registrado(s) en la bitácora.`);
+        setSelectedReviewIds([]);
+      } catch (err: any) {
+        toast.error(`Error al registrar en la bitácora: ${err.message || err}`);
+      }
+    }
+  };
 
   const tabs: { key: TabFilter; label: string; icon: typeof FileText }[] = [
     { key: 'pending_review', label: 'Pendientes', icon: AlertTriangle },
@@ -165,7 +236,10 @@ export function LegalReviewPage() {
                   : 'text-gray-500 hover:text-gray-700'
               }`}
               key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
+              onClick={() => {
+                setActiveTab(tab.key);
+                setSelectedReviewIds([]);
+              }}
               type="button"
             >
               <Icon size={15} />
@@ -179,6 +253,40 @@ export function LegalReviewPage() {
           );
         })}
       </nav>
+
+      {/* Email sending selection banner */}
+      {selectedReviewIds.length > 0 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-3xl border border-red-200 bg-red-50/20 px-6 py-4 animate-in fade-in slide-in-from-top-4 duration-200">
+          <div className="flex items-center gap-2">
+            <Mail className="text-red-600" size={18} />
+            <p className="text-sm font-semibold text-red-900">
+              {selectedReviewIds.length} contragarantía{selectedReviewIds.length > 1 ? 's' : ''} seleccionada{selectedReviewIds.length > 1 ? 's' : ''} para notificar al agente.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <button
+              type="button"
+              className="flex flex-1 sm:flex-initial items-center justify-center gap-2 rounded-2xl bg-red-600 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-red-200 hover:bg-red-700 transition disabled:opacity-50"
+              onClick={handleSendEmails}
+              disabled={markEmailSentMutation.isPending}
+            >
+              {markEmailSentMutation.isPending ? (
+                <Loader2 className="animate-spin" size={14} />
+              ) : (
+                <Send size={14} />
+              )}
+              Enviar correos
+            </button>
+            <button
+              type="button"
+              className="rounded-2xl border border-gray-200 bg-white px-5 py-2.5 text-xs font-bold text-gray-700 hover:bg-gray-50 transition"
+              onClick={() => setSelectedReviewIds([])}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Content */}
       {reviewsQuery.isLoading && (
@@ -215,6 +323,9 @@ export function LegalReviewPage() {
               onDownload={() => handleDownload(review)}
               onPreview={() => handlePreview(review)}
               review={review}
+              isSelected={selectedReviewIds.includes(review.id)}
+              onSelectToggle={() => handleSelectToggle(review.id)}
+              showCheckbox={review.status === 'confirmed'}
             />
           ))}
         </div>
@@ -478,24 +589,43 @@ function ReviewCard({
   onPreview,
   onDownload,
   loadingPreview,
+  isSelected,
+  onSelectToggle,
+  showCheckbox,
 }: {
   review: DocumentReview;
   onPreview: () => void;
   onDownload: () => void;
   loadingPreview: boolean;
+  isSelected?: boolean;
+  onSelectToggle?: () => void;
+  showCheckbox?: boolean;
 }) {
   const isPending = review.status === 'pending_review';
+  const isDirect = review.agentCode?.toUpperCase() === 'DIRECTO' || review.agentName?.toLowerCase().includes('directo');
+  const targetEmail = isDirect ? review.clientEmail : review.agentEmail;
 
   return (
     <div
       className={`group overflow-hidden rounded-2xl border bg-white transition-all hover:shadow-md ${
-        isPending
-          ? 'border-amber-200 shadow-sm shadow-amber-50'
-          : 'border-gray-100'
+        isSelected
+          ? 'border-red-300 bg-red-50/10'
+          : isPending
+            ? 'border-amber-200 shadow-sm shadow-amber-50'
+            : 'border-gray-100'
       }`}
     >
       <div className="flex items-center justify-between px-6 py-5">
         <div className="flex items-center gap-4">
+          {showCheckbox && (
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={onSelectToggle}
+              className="h-4 w-4 shrink-0 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer"
+              onClick={(e) => e.stopPropagation()}
+            />
+          )}
           <div
             className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${
               isPending
@@ -546,6 +676,15 @@ function ReviewCard({
                   <span>Subido por {review.rejectedByName}</span>
                 </>
               )}
+              {review.emailSentAt && (
+                <>
+                  <span>•</span>
+                  <span className="flex items-center gap-1 text-green-600 font-semibold bg-green-50 px-2 py-0.5 rounded-md">
+                    <Mail size={11} />
+                    Notificado por {review.emailSentByName || 'Sistema'} ({format(new Date(review.emailSentAt), 'dd/MM/yyyy HH:mm', { locale: es })})
+                  </span>
+                </>
+              )}
             </div>
             {review.rejectionOptions.length > 0 && (
               <div className="mt-1.5 flex flex-wrap gap-1">
@@ -564,6 +703,22 @@ function ReviewCard({
                 )}
               </div>
             )}
+
+            {/* Destinatario de notificación */}
+            <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-[11px]">
+              <span className="text-gray-500 font-medium">Notificar a:</span>
+              {targetEmail ? (
+                <span className="inline-flex items-center gap-1 font-semibold text-gray-700 bg-gray-100 px-2 py-0.5 rounded border border-gray-200 truncate max-w-xs md:max-w-md" title={targetEmail}>
+                  <Mail size={10} className="text-gray-400 shrink-0" />
+                  {targetEmail}
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 font-semibold text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded">
+                  <AlertTriangle size={10} className="text-red-500 shrink-0" />
+                  Sin correo ({isDirect ? 'Cliente/Fiado' : 'Agente'})
+                </span>
+              )}
+            </div>
           </div>
         </div>
 

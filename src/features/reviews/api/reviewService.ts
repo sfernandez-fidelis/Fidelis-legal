@@ -34,7 +34,13 @@ export interface DocumentReview {
   fidelisEntryDate?: string | null;
   agentId?: string | null;
   agentName?: string | null;
+  agentEmail?: string | null;
+  agentCode?: string | null;
   clientName?: string | null;
+  clientEmail?: string | null;
+  emailSentAt?: string | null;
+  emailSentBy?: string | null;
+  emailSentByName?: string | null;
   signaturePrincipalDetail?: string | null;
   signatureGuarantorDetail?: string | null;
   policyNumber?: string | null;
@@ -56,6 +62,7 @@ export interface RejectionPayload {
   agentId?: string;
   agentName?: string;
   clientName?: string;
+  clientEmail?: string;
   signaturePrincipalDetail?: string;
   signatureGuarantorDetail?: string;
   policyNumber?: string;
@@ -80,7 +87,13 @@ function normalizeReview(row: any): DocumentReview {
     fidelisEntryDate: row.fidelis_entry_date ?? null,
     agentId: row.agent_id ?? null,
     agentName: row.agent_name ?? null,
+    agentEmail: row.agent?.email ?? null,
+    agentCode: row.agent?.code ?? null,
     clientName: row.client_name ?? null,
+    clientEmail: row.client_email ?? null,
+    emailSentAt: row.email_sent_at ?? null,
+    emailSentBy: row.email_sent_by ?? null,
+    emailSentByName: row.email_sender?.full_name ?? null,
     signaturePrincipalDetail: row.signature_principal_detail ?? null,
     signatureGuarantorDetail: row.signature_guarantor_detail ?? null,
     policyNumber: row.policy_number ?? null,
@@ -135,7 +148,9 @@ export const reviewService = {
       .select(
         `*,
          rejector:profiles!document_reviews_rejected_by_fkey(full_name),
-         reviewer:profiles!document_reviews_reviewed_by_fkey(full_name)`,
+         reviewer:profiles!document_reviews_reviewed_by_fkey(full_name),
+         email_sender:profiles!document_reviews_email_sent_by_fkey(full_name),
+         agent:insurance_agents(email, code)`,
       )
       .eq('organization_id', organizationId)
       .order('created_at', { ascending: false });
@@ -165,7 +180,7 @@ export const reviewService = {
     actorId: string,
     payload: RejectionPayload,
   ): Promise<string> {
-    const { file, reason, documentDate, fidelisEntryDate, agentId, agentName, clientName, signaturePrincipalDetail, signatureGuarantorDetail, policyNumber, rejectionOptions, documentId } = payload;
+    const { file, reason, documentDate, fidelisEntryDate, agentId, agentName, clientName, clientEmail, signaturePrincipalDetail, signatureGuarantorDetail, policyNumber, rejectionOptions, documentId } = payload;
 
     // Compress PDF before upload
     const fileToUpload = await compressPdf(file);
@@ -202,6 +217,7 @@ export const reviewService = {
         agent_id: agentId || null,
         agent_name: agentName || null,
         client_name: clientName || null,
+        client_email: clientEmail || null,
         signature_principal_detail: signaturePrincipalDetail || null,
         signature_guarantor_detail: signatureGuarantorDetail || null,
         policy_number: policyNumber || null,
@@ -284,5 +300,22 @@ export const reviewService = {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  },
+
+  async markEmailSent(
+    organizationId: string,
+    actorId: string,
+    reviewIds: string[],
+  ): Promise<void> {
+    const { error } = await supabase
+      .from('document_reviews')
+      .update({
+        email_sent_at: new Date().toISOString(),
+        email_sent_by: actorId,
+      })
+      .in('id', reviewIds)
+      .eq('organization_id', organizationId);
+
+    if (error) throw error;
   },
 };
