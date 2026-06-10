@@ -135,6 +135,7 @@ async function main() {
           const clientName = row.NOMBRE_CLIENTE || '';
           const nit = row.NIT_CLIENTE || '';
           const dpi = row.DPI_CLIENTE || '';
+          const isEmpresa = row.TIPO_CLIENTE === 'EMPRESA';
 
           uniqueContacts.set(externalKey, {
             organization_id: organizationId,
@@ -144,9 +145,19 @@ async function main() {
               name: clientName,
               nit: nit,
               dpi: dpi,
+              idNumber: dpi,
+              cui: dpi,
               type: row.TIPO_CLIENTE || 'INDIVIDUAL',
+              entityName: isEmpresa ? clientName : '',
+              isRepresenting: Boolean(row.NOMBRE_REPRESENTANTE),
+              role: row.NOMBRE_REPRESENTANTE ? 'Representante Legal' : '',
               representative: row.NOMBRE_REPRESENTANTE || '',
               representative_code: row.COD_CONTACTO_REPRE || ''
+            },
+            metadata: {
+              displayName: clientName,
+              recordType: isEmpresa ? 'entity' : 'person',
+              contactTypes: isEmpresa ? ['entity', 'principal', 'guarantor'] : ['principal', 'guarantor']
             },
             search_text: `${clientName.toLowerCase()} ${nit.toLowerCase()} ${dpi.toLowerCase()}`.trim()
           });
@@ -161,7 +172,7 @@ async function main() {
         for (let i = 0; i < contactsToInsert.length; i += batchSize) {
           const batch = contactsToInsert.slice(i, i + batchSize);
           await sql`
-            INSERT INTO public.contacts ${(sql as any)(batch, 'organization_id', 'kind', 'external_key', 'party', 'search_text')}
+            INSERT INTO public.contacts ${(sql as any)(batch, 'organization_id', 'kind', 'external_key', 'party', 'metadata', 'search_text')}
           `;
         }
         console.log('  ✓ Clientes/contactos importados correctamente.');

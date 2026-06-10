@@ -18,6 +18,22 @@ export function useInsuranceAgentsQuery() {
   });
 }
 
+export function useAgentSuggestions(
+  search: string,
+  options: { limit?: number; enabled?: boolean } = {},
+) {
+  const session = useAppSession();
+  const orgId = session?.membership.organizationId ?? '';
+
+  return useQuery({
+    queryKey: ['agentSuggestions', orgId, search, options.limit],
+    queryFn: () => insuranceAgentService.searchAgents(orgId, search, options),
+    enabled: Boolean(orgId) && (options.enabled ?? true),
+    staleTime: search.trim() ? 30 * 1000 : 2 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+  });
+}
+
 export function useCreateInsuranceAgent() {
   const session = useAppSession();
   const queryClient = useQueryClient();

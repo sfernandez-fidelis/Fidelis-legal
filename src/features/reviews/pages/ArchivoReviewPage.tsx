@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useReviewsQuery, useSubmitRejection } from '../hooks/useReviewsQuery';
-import { useInsuranceAgentsQuery } from '../hooks/useInsuranceAgents';
+import { useInsuranceAgentsQuery, useAgentSuggestions } from '../hooks/useInsuranceAgents';
 import { useDocumentsQuery } from '../../documents/hooks/useDocumentsQuery';
 import { REJECTION_OPTIONS, type RejectionOptionValue } from '../api/reviewService';
 import { PageLoader } from '../../../shared/components/PageLoader';
@@ -87,14 +87,14 @@ export function ArchivoReviewPage() {
     ? clientSuggestions.data ?? []
     : recentClients.data ?? [];
 
-  const filteredAgents = (agentsQuery.data ?? []).filter((agent) => {
-    const term = agentSearchInput.toLowerCase().trim();
-    if (!term) return true;
-    return (
-      agent.fullName.toLowerCase().includes(term) ||
-      (agent.code && agent.code.toLowerCase().includes(term))
-    );
+  const debouncedAgentSearch = useDebouncedValue(agentSearchInput, 250);
+
+  const agentSuggestions = useAgentSuggestions(debouncedAgentSearch, {
+    limit: 10,
+    enabled: showAgentSuggestions,
   });
+
+  const agentSuggestionResults = agentSuggestions.data ?? [];
 
   const selectedAgent = agentsQuery.data?.find((a) => a.id === form.agentId);
   const isDirectAgent = 
@@ -409,9 +409,9 @@ export function ArchivoReviewPage() {
                     type="text"
                     value={agentSearchInput}
                   />
-                  {showAgentSuggestions && filteredAgents.length > 0 && (
+                  {showAgentSuggestions && agentSuggestionResults.length > 0 && (
                     <div className="absolute left-0 right-0 z-50 mt-1 max-h-60 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-xl divide-y divide-gray-50">
-                      {filteredAgents.map((agent) => (
+                      {agentSuggestionResults.map((agent) => (
                         <button
                           key={agent.id}
                           type="button"

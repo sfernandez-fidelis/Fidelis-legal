@@ -40,6 +40,30 @@ export const insuranceAgentService = {
     return (data ?? []).map(normalizeAgent);
   },
 
+  async searchAgents(
+    organizationId: string,
+    search: string,
+    options: { limit?: number } = {},
+  ): Promise<InsuranceAgent[]> {
+    const limit = options.limit ?? 10;
+    let query = supabase
+      .from('insurance_agents')
+      .select('*')
+      .eq('organization_id', organizationId)
+      .eq('is_active', true)
+      .is('archived_at', null)
+      .limit(limit);
+
+    if (search.trim()) {
+      query = query.or(`full_name.ilike.%${search.trim()}%,code.ilike.%${search.trim()}%`);
+    }
+
+    const { data, error } = await query.order('full_name', { ascending: true });
+
+    if (error) throw error;
+    return (data ?? []).map(normalizeAgent);
+  },
+
   async createAgent(
     organizationId: string,
     actorId: string,
