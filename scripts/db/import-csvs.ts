@@ -31,17 +31,18 @@ async function main() {
   const sql = getSqlClient();
 
   try {
-    const orgs = await sql`SELECT id FROM public.organizations LIMIT 1`;
+    // 1. Obtener todas las organizaciones de la base de datos
+    const orgs = await sql`SELECT id, name FROM public.organizations`;
     if (!orgs.length) {
       throw new Error('No se encontró ninguna organización en la base de datos. Ejecuta primero npm run db:setup');
     }
-    const organizationId = orgs[0].id;
-    console.log(`▶ Usando organización ID: ${organizationId}`);
+    console.log(`▶ Encontradas ${orgs.length} organizaciones en la base de datos.`);
 
     // ==========================================
-    // SECCIÓN 1: IMPORTAR AGENTES
+    // SECCIÓN 1: LEER Y PARSEAR AGENTES
     // ==========================================
     const agentesPath = path.resolve('.sql/agentes.csv');
+    let agentsTemplate: any[] = [];
     if (fs.existsSync(agentesPath)) {
       console.log('▶ Procesando agentes.csv ...');
       const content = fs.readFileSync(agentesPath, 'utf8');
@@ -49,7 +50,6 @@ async function main() {
       
       if (lines.length > 1) {
         const headers = parseCsvLine(lines[0]);
-        const agentsToInsert: any[] = [];
 
         for (let i = 1; i < lines.length; i++) {
           const values = parseCsvLine(lines[i]);
@@ -64,8 +64,7 @@ async function main() {
             ? row.EMAIL.split(',').map((e: string) => e.trim()).filter(Boolean).join(',')
             : null;
 
-          agentsToInsert.push({
-            organization_id: organizationId,
+          agentsTemplate.push({
             full_name: row.NOMBRE || 'Sin Nombre',
             code: row.NUMERO_AGENTE || null,
             email: cleanEmail,
@@ -74,26 +73,15 @@ async function main() {
             is_active: row.ESTADO === 'A'
           });
         }
-
-        console.log(`  Limpiando agentes existentes...`);
-        await sql`DELETE FROM public.insurance_agents WHERE organization_id = ${organizationId}`;
-
-        console.log(`  Insertando ${agentsToInsert.length} agentes...`);
-        const batchSize = 100;
-        for (let i = 0; i < agentsToInsert.length; i += batchSize) {
-          const batch = agentsToInsert.slice(i, i + batchSize);
-          await sql`
-            INSERT INTO public.insurance_agents ${(sql as any)(batch, 'organization_id', 'full_name', 'code', 'email', 'phone', 'notes', 'is_active')}
-          `;
-        }
-        console.log('  ✓ Agentes importados correctamente.');
+        console.log(`  ✓ Se parsearon ${agentsTemplate.length} agentes.`);
       }
     }
 
     // ==========================================
-    // SECCIÓN 2: IMPORTAR CLIENTES
+    // SECCIÓN 2: LEER Y PARSEAR CLIENTES
     // ==========================================
     const clientesPath = path.resolve('.sql/clientes.csv');
+    let clientsTemplate: any[] = [];
     if (fs.existsSync(clientesPath)) {
       console.log('▶ Procesando clientes.csv ...');
       const content = fs.readFileSync(clientesPath, 'utf8');
@@ -138,7 +126,6 @@ async function main() {
           const isEmpresa = row.TIPO_CLIENTE === 'EMPRESA';
 
           uniqueContacts.set(externalKey, {
-            organization_id: organizationId,
             kind: 'party',
             external_key: externalKey,
             party: {
@@ -162,12 +149,50 @@ async function main() {
             search_text: `${clientName.toLowerCase()} ${nit.toLowerCase()} ${dpi.toLowerCase()}`.trim()
           });
         }
+        clientsTemplate = Array.from(uniqueContacts.values());
+        console.log(`  ✓ Se parsearon ${clientsTemplate.length} contactos únicos.`);
+      }
+    }
 
-        const contactsToInsert = Array.from(uniqueContacts.values());
+    // ==========================================
+    // SECCIÓN 3: IMPORTAR EN CADA ORGANIZACIÓN
+    // ==========================================
+    for (const org of orgs) {
+      const organizationId = org.id;
+      console.log(`\n▶ Importando datos para organización: "${org.name}" (ID: ${organizationId})`);
+
+      // Importar Agentes
+      if (agentsTemplate.length > 0) {
+        console.log(`  Limpiando agentes existentes...`);
+        await sql`DELETE FROM public.insurance_agents WHERE organization_id = ${organizationId}`;
+
+        const agentsToInsert = agentsTemplate.map(agent => ({
+          ...agent,
+          organization_id: organizationId
+        }));
+
+        console.log(`  Insertando ${agentsToInsert.length} agentes...`);
+        const batchSize = 100;
+        for (let i = 0; i < agentsToInsert.length; i += batchSize) {
+          const batch = agentsToInsert.slice(i, i + batchSize);
+          await sql`
+            INSERT INTO public.insurance_agents ${(sql as any)(batch, 'organization_id', 'full_name', 'code', 'email', 'phone', 'notes', 'is_active')}
+          `;
+        }
+        console.log('  ✓ Agentes importados correctamente.');
+      }
+
+      // Importar Contactos
+      if (clientsTemplate.length > 0) {
         console.log(`  Limpiando contactos existentes...`);
         await sql`DELETE FROM public.contacts WHERE organization_id = ${organizationId}`;
 
-        console.log(`  Insertando ${contactsToInsert.length} contactos únicos (de un total de ${lines.length - 1} filas)...`);
+        const contactsToInsert = clientsTemplate.map(contact => ({
+          ...contact,
+          organization_id: organizationId
+        }));
+
+        console.log(`  Insertando ${contactsToInsert.length} contactos...`);
         const batchSize = 200;
         for (let i = 0; i < contactsToInsert.length; i += batchSize) {
           const batch = contactsToInsert.slice(i, i + batchSize);
@@ -179,7 +204,7 @@ async function main() {
       }
     }
 
-    console.log('\n✅ Proceso de importación finalizado con éxito.');
+    console.log('\n✅ Proceso de importación en todas las organizaciones finalizado con éxito.');
   } catch (error) {
     console.error('\n❌ Error durante la importación:', error);
   } finally {

@@ -155,15 +155,47 @@ async function buildAppSession(user: User): Promise<AppSession> {
       withTimeout(fetchMembership(user.id), 'fetchMembership'),
     ]);
 
-    let finalMembership = initialMembership;
+    // Check if the default development organization exists
+    const { data: defaultOrg } = await supabase
+      .from('organizations')
+      .select('id, name, slug')
+      .eq('id', '00000000-0000-0000-0000-000000000001')
+      .maybeSingle();
+
+    let finalMembership = null;
+
+    if (defaultOrg) {
+      console.log('[AuthService] Default local workspace (00000000-0000-0000-0000-000000000001) found. Ensuring user membership...');
+      const { error: memberError } = await supabase
+        .from('organization_members')
+        .upsert({
+          organization_id: defaultOrg.id,
+          user_id: user.id,
+          role: 'owner',
+        }, { onConflict: 'organization_id,user_id' });
+
+      if (!memberError) {
+        finalMembership = {
+          organization_id: defaultOrg.id,
+          role: 'owner' as const,
+          organizations: defaultOrg
+        };
+      } else {
+        console.error('[AuthService] Error joining default workspace:', memberError);
+      }
+    }
+
     if (!finalMembership) {
-      console.log('[AuthService] No membership found, waiting for pending invitations to complete...');
-      await invitationsPromise;
-      finalMembership = await withTimeout(fetchMembership(user.id), 'fetchMembershipRetry');
-      
+      finalMembership = initialMembership;
       if (!finalMembership) {
-        console.log('[AuthService] Still no membership found, bootstrapping workspace...');
-        finalMembership = await withTimeout(bootstrapWorkspace(user), 'bootstrapWorkspace');
+        console.log('[AuthService] No membership found, waiting for pending invitations to complete...');
+        await invitationsPromise;
+        finalMembership = await withTimeout(fetchMembership(user.id), 'fetchMembershipRetry');
+        
+        if (!finalMembership) {
+          console.log('[AuthService] Still no membership found, bootstrapping workspace...');
+          finalMembership = await withTimeout(bootstrapWorkspace(user), 'bootstrapWorkspace');
+        }
       }
     }
 

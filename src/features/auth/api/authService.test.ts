@@ -106,6 +106,16 @@ describe('authService', () => {
           })),
         })),
       }),
+      organizations: () => ({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: null,
+              error: null,
+            }),
+          })),
+        })),
+      }),
     };
 
     mocks.from.mockImplementation((table: string) => {
@@ -199,18 +209,26 @@ describe('authService', () => {
       })),
     }));
 
-    const organizationsSelect = vi.fn(() => ({
-      eq: vi.fn(() => ({
-        single: vi.fn().mockResolvedValue({
+    const organizationsSelect = vi.fn(() => {
+      const selectMock: any = {};
+      selectMock.eq = vi.fn(() => {
+        const eqMock: any = {};
+        eqMock.single = vi.fn().mockResolvedValue({
           data: {
             id: 'org-1',
             name: 'Workspace Owner Workspace',
             slug: 'workspace-owner-user-1',
           },
           error: null,
-        }),
-      })),
-    }));
+        });
+        eqMock.maybeSingle = vi.fn().mockResolvedValue({
+          data: null,
+          error: null,
+        });
+        return eqMock;
+      });
+      return selectMock;
+    });
 
     mocks.from.mockImplementation((table: string) => {
       if (table === 'profiles') {
@@ -251,7 +269,7 @@ describe('authService', () => {
     expect(session?.activeOrganization.id).toBe('org-1');
     expect(session?.membership.role).toBe('owner');
     expect(organizationsInsert).toHaveBeenCalledTimes(1);
-    expect(organizationsSelect).toHaveBeenCalledTimes(1);
+    expect(organizationsSelect).toHaveBeenCalledTimes(2);
     expect(membershipUpsert).toHaveBeenCalledWith(
       {
         organization_id: 'org-1',
